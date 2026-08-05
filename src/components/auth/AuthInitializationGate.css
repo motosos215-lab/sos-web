@@ -1,0 +1,22 @@
+.auth-gate {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  color: var(--color-text-muted, #6b7280);
+  font-size: 0.95rem;
+}
+
+.auth-gate__logo {
+  display: grid;
+  place-items: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 1rem;
+  background: var(--color-primary, #e11d48);
+  color: #fff;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}

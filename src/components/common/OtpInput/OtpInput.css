@@ -1,0 +1,69 @@
+.otp-input {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.otp-input__label {
+  color: var(--color-text);
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.otp-input__hint {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.otp-input__group {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.otp-input__control {
+  width: 100%;
+  min-width: 0;
+  min-height: 52px;
+  color: var(--color-text);
+  font-size: clamp(1.1rem, 5vw, 1.35rem);
+  font-weight: 900;
+  text-align: center;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  outline: none;
+  transition:
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.otp-input__control:focus {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 4px rgba(25, 75, 204, 0.12);
+  transform: translateY(-1px);
+}
+
+.otp-input__group[aria-invalid="true"] .otp-input__control {
+  border-color: var(--color-danger);
+}
+
+.otp-input__error {
+  margin: 0;
+  color: var(--color-danger);
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+@media (max-width: 420px) {
+  .otp-input__group {
+    gap: 0.35rem;
+  }
+
+  .otp-input__control {
+    min-height: 46px;
+    border-radius: var(--radius-sm);
+  }
+}

@@ -1,0 +1,120 @@
+.profile-setup {
+  display: grid;
+  gap: 1rem;
+}
+
+.profile-setup__header {
+  padding: clamp(1rem, 3vw, 1.4rem);
+  background: var(--color-surface);
+  border: 1px solid rgba(208, 213, 221, 0.72);
+  border-radius: var(--radius-lg);
+}
+
+.profile-setup__header p,
+.profile-setup__header h1,
+.profile-setup__header span {
+  margin: 0;
+}
+
+.profile-setup__header p {
+  color: var(--color-primary);
+  font-size: 0.9rem;
+  font-weight: 900;
+}
+
+.profile-setup__header h1 {
+  margin-top: 0.35rem;
+  color: var(--color-text);
+  font-size: clamp(1.9rem, 4vw, 2.6rem);
+  line-height: 1.05;
+  letter-spacing: -0.055em;
+}
+
+.profile-setup__header span {
+  display: block;
+  margin-top: 0.55rem;
+  color: var(--color-text-muted);
+  line-height: 1.55;
+}
+
+.profile-setup__form {
+  display: grid;
+  gap: 1rem;
+}
+
+.profile-setup__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.profile-setup__column,
+.profile-setup__security-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.profile-setup__security-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.profile-setup__hint,
+.profile-setup__privacy,
+.profile-setup__counter {
+  margin: 0.35rem 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.profile-setup__privacy {
+  color: var(--color-primary-dark);
+}
+
+.profile-setup__counter {
+  text-align: right;
+}
+
+.profile-setup__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem;
+  background: var(--color-surface);
+  border: 1px solid rgba(208, 213, 221, 0.72);
+  border-radius: var(--radius-lg);
+}
+
+.profile-setup__actions > .button {
+  width: auto;
+}
+
+.profile-setup__actions > div {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.profile-setup__actions > div .button {
+  min-width: 150px;
+}
+
+@media (max-width: 980px) {
+  .profile-setup__grid,
+  .profile-setup__security-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .profile-setup__actions,
+  .profile-setup__actions > div {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .profile-setup__actions > .button,
+  .profile-setup__actions > div .button {
+    width: 100%;
+  }
+}

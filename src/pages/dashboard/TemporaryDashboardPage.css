@@ -1,0 +1,40 @@
+.temporary-dashboard-page {
+  display: grid;
+  gap: 0.8rem;
+  max-width: 760px;
+}
+
+.temporary-dashboard-page p,
+.temporary-dashboard-page h1,
+.temporary-dashboard-page span,
+.temporary-dashboard-page strong {
+  margin: 0;
+}
+
+.temporary-dashboard-page p {
+  color: var(--color-primary);
+  font-size: 0.86rem;
+  font-weight: 900;
+}
+
+.temporary-dashboard-page h1 {
+  color: var(--color-text);
+  font-size: clamp(1.9rem, 4vw, 2.6rem);
+  line-height: 1.05;
+  letter-spacing: -0.055em;
+}
+
+.temporary-dashboard-page span {
+  color: var(--color-text-muted);
+  line-height: 1.6;
+}
+
+.temporary-dashboard-page .button {
+  width: max-content;
+}
+
+@media (max-width: 560px) {
+  .temporary-dashboard-page .button {
+    width: 100%;
+  }
+}

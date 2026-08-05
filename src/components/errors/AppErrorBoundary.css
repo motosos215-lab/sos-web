@@ -1,0 +1,48 @@
+.app-error {
+  align-items: center;
+  background: #f7f9fc;
+  color: #172033;
+  display: flex;
+  min-height: 100vh;
+  padding: 24px;
+}
+
+.app-error__card {
+  background: #ffffff;
+  border: 1px solid #dfe6f1;
+  border-radius: 24px;
+  box-shadow: 0 24px 80px rgb(15 23 42 / 12%);
+  margin: 0 auto;
+  max-width: 520px;
+  padding: 32px;
+  text-align: center;
+}
+
+.app-error__logo {
+  align-items: center;
+  background: #e11d48;
+  border-radius: 18px;
+  color: #ffffff;
+  display: inline-flex;
+  font-weight: 800;
+  height: 52px;
+  justify-content: center;
+  margin-bottom: 16px;
+  width: 52px;
+}
+
+.app-error__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+  margin-top: 24px;
+}
+
+.app-error__actions button {
+  border: 0;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 700;
+  padding: 10px 16px;
+}
