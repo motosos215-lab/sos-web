@@ -1,0 +1,115 @@
+.account-type {
+  padding: 0;
+  margin: 0;
+  border: 0;
+}
+
+.account-type__legend {
+  margin-bottom: 0.5rem;
+  color: var(--color-text);
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.account-type__options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.8rem;
+}
+
+.account-type__option {
+  position: relative;
+  cursor: pointer;
+}
+
+.account-type__radio {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.account-type__card {
+  display: flex;
+  gap: 0.75rem;
+  min-height: 112px;
+  padding: 0.95rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.account-type__option:hover .account-type__card {
+  border-color: var(--color-primary);
+  transform: translateY(-1px);
+}
+
+.account-type__radio:checked + .account-type__card {
+  background: rgba(25, 75, 204, 0.08);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 4px rgba(25, 75, 204, 0.1);
+}
+
+.account-type__radio:checked + .account-type__card .account-type__icon {
+  color: var(--color-surface);
+  background: var(--color-primary);
+}
+
+.account-type__radio:checked + .account-type__card .account-type__label {
+  color: var(--color-primary);
+}
+
+.account-type__radio:checked + .account-type__card .account-type__description {
+  color: var(--color-primary-dark);
+}
+
+.account-type__radio:focus-visible + .account-type__card {
+  outline: 3px solid rgba(25, 75, 204, 0.28);
+  outline-offset: 2px;
+}
+
+.account-type__icon {
+  display: grid;
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  color: var(--color-primary);
+  font-weight: 900;
+  background: rgba(25, 75, 204, 0.1);
+  border-radius: 12px;
+}
+
+.account-type__label,
+.account-type__description {
+  display: block;
+}
+
+.account-type__label {
+  color: var(--color-text);
+  font-weight: 900;
+}
+
+.account-type__description {
+  margin-top: 0.25rem;
+  color: var(--color-text-muted);
+  font-size: 0.84rem;
+  line-height: 1.4;
+}
+
+.account-type__error {
+  margin: 0.45rem 0 0;
+  color: var(--color-danger);
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+@media (max-width: 480px) {
+  .account-type__options {
+    grid-template-columns: 1fr;
+  }
+}

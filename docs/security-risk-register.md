@@ -1,0 +1,5 @@
+# Security Risk Register
+
+| ID | Fecha de deteccion | Componente | Severidad | Descripcion | Dependencia directa o transitiva | Estado del fix | Medida temporal | Responsable | Fecha de proxima revision | Estado |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| FE-SEC-001 | 2026-08-05 | react-router / react-router-dom | High | npm audit reporta advisories high en `react-router`, introducido por `react-router-dom`. | `react-router-dom` es directa; `react-router` es transitiva. | Pendiente. npm propone `react-router-dom@7.11.0`, pero ese downgrade no resuelve el conjunto completo de advisories previamente observado y requiere analisis de compatibilidad. | Mantener Frontend Security estricto; revisar actualizaciones mediante Dependabot; no introducir usos adicionales del componente afectado sin revision; validar alcance de los advisories; actualizar en cuanto exista una version segura y compatible. | Equipo frontend MotoSOS | En cada PR de Dependabot y semanalmente durante la ejecucion de Frontend Security | Abierto |
