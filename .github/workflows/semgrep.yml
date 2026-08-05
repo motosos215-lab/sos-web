@@ -2,9 +2,9 @@ name: Semgrep
 
 on:
   pull_request:
-    branches: ["main"]
+    branches: ["main", "develop"]
   push:
-    branches: ["main"]
+    branches: ["main", "develop"]
   schedule:
     - cron: "37 3 * * 1"
   workflow_dispatch:
@@ -26,5 +26,3 @@ jobs:
 
       - name: Run Semgrep
         run: semgrep ci --config p/default --config p/security-audit --config p/secrets
-        env:
-          SEMGREP_APP_TOKEN: ${{ secrets.SEMGREP_APP_TOKEN }}
