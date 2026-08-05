@@ -1,0 +1,64 @@
+name: Frontend CI
+
+on:
+  pull_request:
+    branches: ["main"]
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check formatting script
+        run: |
+          if npm run | grep -q "format:check"; then
+            npm run format:check
+          else
+            echo "No format:check script configured; skipping."
+          fi
+
+      - name: Check lint script
+        run: |
+          if npm run | grep -q "lint"; then
+            npm run lint
+          else
+            echo "No lint script configured; skipping."
+          fi
+
+      - name: Check type-check script
+        run: |
+          if npm run | grep -q "type-check"; then
+            npm run type-check
+          else
+            echo "No type-check script configured; skipping."
+          fi
+
+      - name: Check test script
+        run: |
+          if npm run | grep -q "test"; then
+            npm test
+          else
+            echo "No test script configured; skipping."
+          fi
+
+      - name: Build frontend
+        run: npm run build
