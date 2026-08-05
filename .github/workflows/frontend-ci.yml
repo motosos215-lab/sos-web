@@ -2,9 +2,9 @@ name: Frontend CI
 
 on:
   pull_request:
-    branches: ["main"]
+    branches: ["main", "develop"]
   push:
-    branches: ["main"]
+    branches: ["main", "develop"]
   workflow_dispatch:
 
 permissions:
@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   build:
-    name: Build
+    name: Frontend CI
     runs-on: ubuntu-latest
 
     steps:
@@ -30,7 +30,7 @@ jobs:
 
       - name: Check formatting script
         run: |
-          if npm run | grep -q "format:check"; then
+          if node -e "process.exit(require('./package.json').scripts?.['format:check'] ? 0 : 1)"; then
             npm run format:check
           else
             echo "No format:check script configured; skipping."
@@ -38,7 +38,7 @@ jobs:
 
       - name: Check lint script
         run: |
-          if npm run | grep -q "lint"; then
+          if node -e "process.exit(require('./package.json').scripts?.['lint'] ? 0 : 1)"; then
             npm run lint
           else
             echo "No lint script configured; skipping."
@@ -46,7 +46,7 @@ jobs:
 
       - name: Check type-check script
         run: |
-          if npm run | grep -q "type-check"; then
+          if node -e "process.exit(require('./package.json').scripts?.['type-check'] ? 0 : 1)"; then
             npm run type-check
           else
             echo "No type-check script configured; skipping."
@@ -54,7 +54,7 @@ jobs:
 
       - name: Check test script
         run: |
-          if npm run | grep -q "test"; then
+          if node -e "process.exit(require('./package.json').scripts?.['test'] ? 0 : 1)"; then
             npm test
           else
             echo "No test script configured; skipping."
