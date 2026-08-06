@@ -96,3 +96,9 @@ Secrets tipicos de Netlify, si se usan GitHub Actions en el futuro:
 - `NETLIFY_SITE_ID`
 
 No crear ni commitear esos secrets en archivos del repositorio.
+
+## Validación posterior a la estabilización
+
+Los workflows del frontend fueron configurados para validar Pull Requests hacia
+`develop` y `main`. Los nombres exactos de los status checks deben confirmarse
+en GitHub antes de agregarlos como obligatorios en los rulesets.
