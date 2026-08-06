@@ -22,7 +22,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@SHA_REAL_DE_CHECKOUT # v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Run Semgrep
         run: semgrep scan --error --config p/default --config p/security-audit --config p/secrets .
