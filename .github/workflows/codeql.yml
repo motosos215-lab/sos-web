@@ -2,9 +2,9 @@ name: CodeQL
 
 on:
   pull_request:
-    branches: ["main"]
+    branches: ["main", "develop"]
   push:
-    branches: ["main"]
+    branches: ["main", "develop"]
   schedule:
     - cron: "24 3 * * 1"
   workflow_dispatch:
@@ -20,15 +20,15 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
 
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v3
+        uses: github/codeql-action/init@c4dd10e044af8838a891fe31cedd449bcb4a6728b # v3
         with:
           languages: javascript-typescript
 
       - name: Autobuild
-        uses: github/codeql-action/autobuild@v3
+        uses: github/codeql-action/autobuild@c4dd10e044af8838a891fe31cedd449bcb4a6728b # v3
 
       - name: Perform CodeQL Analysis
-        uses: github/codeql-action/analyze@v3
+        uses: github/codeql-action/analyze@c4dd10e044af8838a891fe31cedd449bcb4a6728b # v3
