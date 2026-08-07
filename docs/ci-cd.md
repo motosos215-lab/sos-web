@@ -95,6 +95,7 @@ Secrets tipicos de Netlify, si se usan GitHub Actions en el futuro:
 - `NETLIFY_AUTH_TOKEN`
 - `NETLIFY_SITE_ID`
 
+HEAD
 No crear ni commitear esos secrets en archivos del repositorio.
 
 ## Validación posterior a la estabilización
@@ -102,3 +103,18 @@ No crear ni commitear esos secrets en archivos del repositorio.
 Los workflows del frontend fueron configurados para validar Pull Requests hacia
 `develop` y `main`. Los nombres exactos de los status checks deben confirmarse
 en GitHub antes de agregarlos como obligatorios en los rulesets.
+No crear ni commitear esos secrets en archivos del repositorio.
+
+## Validación posterior a la estabilización
+
+Los workflows del frontend se validan mediante Pull Requests dirigidos a
+`develop` y `main`.
+
+Antes de configurar los rulesets como obligatorios, se deben comprobar en
+GitHub los nombres exactos de los status checks y confirmar que cada workflow
+se ejecuta correctamente.
+
+El workflow Frontend Security continúa reportando el riesgo conocido
+FE-SEC-001 relacionado con React Router, por lo que todavía no debe
+configurarse como required check.
+29827bb (docs: registra validación posterior de CI)
