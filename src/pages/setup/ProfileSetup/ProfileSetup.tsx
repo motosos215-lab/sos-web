@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AlertMessage } from "../../../components/common/AlertMessage/AlertMessage";
 import { Button } from "../../../components/common/Button/Button";
@@ -8,9 +8,19 @@ import { Input } from "../../../components/common/Input/Input";
 import { Select, type SelectOption } from "../../../components/common/Select/Select";
 import { Textarea } from "../../../components/common/Textarea/Textarea";
 import { SetupLayout } from "../../../layouts/SetupLayout/SetupLayout";
-import { getDriverProfileDraft, saveDriverProfileDraft } from "../../../services/profileDraftService";
-import { saveDriverProfile, type DriverProfileFormData } from "../../../services/profileService";
+import { getCurrentUser } from "../../../services/authService";
+import { getOnboardingStatus, getSetupStepFromOnboardingStatus, resolveOnboardingRoute } from "../../../services/onboardingService";
+import { clearDriverProfileDraft, getDriverProfileDraft, saveDriverProfileDraft } from "../../../services/profileDraftService";
+import {
+  getMyProfile,
+  mapDriverProfileFormToPayload,
+  saveMyProfile,
+  type DriverProfileFormData,
+  type MyProfile,
+} from "../../../services/profileService";
 import { getActiveUserId, getSession, updateSession } from "../../../services/sessionService";
+import type { ApiUserProfile } from "../../../types/auth";
+import { getApiErrorMessage } from "../../../utils/apiErrors";
 import "./ProfileSetup.css";
 
 interface DriverProfileErrors {
@@ -143,6 +153,41 @@ function getInitialFormData(): DriverProfileFormData {
   };
 }
 
+function toDateInputValue(value: string | null | undefined): string {
+  return typeof value === "string" && value.length >= 10 ? value.slice(0, 10) : "";
+}
+
+function mapProfileToFormData(profile: MyProfile, fallbackUser: ApiUserProfile | null): DriverProfileFormData {
+  return {
+    fullName: profile.fullName ?? fallbackUser?.fullName ?? "",
+    birthDate: toDateInputValue(profile.dateOfBirth),
+    personalId: profile.curpOrIdentifier ?? "",
+    phone: profile.phoneNumber ?? fallbackUser?.phoneNumber ?? "",
+    email: fallbackUser?.email ?? getSession()?.email ?? "",
+    city: profile.primaryCity ?? "",
+    address: profile.addressOrZone ?? "",
+    medicalConditions: profile.medicalConditions ?? profile.allergies ?? "",
+    bloodType: profile.bloodType ?? "",
+    emergencyContact: {
+      fullName: profile.provisionalEmergencyContactName ?? "",
+      relationship: "",
+      phone: profile.provisionalEmergencyContactPhone ?? "",
+    },
+    licenseFile: null,
+  };
+}
+
+function mapUserToFormData(user: ApiUserProfile | null): DriverProfileFormData {
+  const session = getSession();
+
+  return {
+    ...getInitialFormData(),
+    fullName: user?.fullName ?? session?.name ?? "",
+    phone: user?.phoneNumber ?? "",
+    email: user?.email ?? session?.email ?? "",
+  };
+}
+
 export function ProfileSetup() {
   const navigate = useNavigate();
   const [formData, setFormData] = useState<DriverProfileFormData>(getInitialFormData);
@@ -150,24 +195,54 @@ export function ProfileSetup() {
   const [successMessage, setSuccessMessage] = useState("");
   const [infoMessage, setInfoMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+  const [profileAllergies, setProfileAllergies] = useState("");
 
-  useEffect(() => {
+  const loadProfile = useCallback(async () => {
     const userId = getActiveUserId();
     const draft = userId ? getDriverProfileDraft(userId) : null;
 
-    if (!draft) {
-      return;
-    }
+    setIsLoadingProfile(true);
+    setErrors({});
+    setSuccessMessage("");
+    setInfoMessage("");
 
-    setFormData((current) => ({
-      ...current,
-      ...draft,
-      email: current.email || draft.email,
-      medicalConditions: "",
-      licenseFile: null,
-    }));
-    setInfoMessage("Se recuperó tu borrador anterior");
+    try {
+      const user = await getCurrentUser();
+      const profile = await getMyProfile();
+
+      if (profile) {
+        setFormData(mapProfileToFormData(profile, user));
+        setProfileAllergies(profile.allergies ?? "");
+
+        if (draft) {
+          setInfoMessage("Existe un borrador local, pero se cargó la información guardada en MotoSOS.");
+        }
+      } else if (draft) {
+        setFormData((current) => ({
+          ...current,
+          ...mapUserToFormData(user),
+          ...draft,
+          email: user.email || draft.email,
+          medicalConditions: "",
+          licenseFile: null,
+        }));
+        setProfileAllergies("");
+        setInfoMessage("Se recuperó tu borrador anterior");
+      } else {
+        setFormData(mapUserToFormData(user));
+        setProfileAllergies("");
+      }
+    } catch (error) {
+      setErrors({ form: getApiErrorMessage(error) });
+    } finally {
+      setIsLoadingProfile(false);
+    }
   }, []);
+
+  useEffect(() => {
+    loadProfile();
+  }, [loadProfile]);
 
   const updateField = <Field extends keyof DriverProfileFormData>(
     field: Field,
@@ -240,16 +315,46 @@ export function ProfileSetup() {
     setIsSubmitting(true);
 
     try {
-      const response = await saveDriverProfile(formData);
-      setSuccessMessage(response.message);
-      updateSession({ currentSetupStep: response.data.nextStep });
-      window.setTimeout(() => navigate("/configuracion/motocicleta"), 700);
-    } catch {
-      setErrors({ form: "No pudimos guardar tu perfil. Inténtalo nuevamente." });
+      const payload = mapDriverProfileFormToPayload(formData);
+      await saveMyProfile({ ...payload, allergies: profileAllergies });
+
+      const status = await getOnboardingStatus();
+      const nextStep = getSetupStepFromOnboardingStatus(status, getSession()?.currentSetupStep);
+      const setupCompleted = status.isCompleted === true || status.isConfirmed === true || nextStep === "completed";
+
+      updateSession({
+        setupCompleted,
+        registrationStatus: setupCompleted ? "completed" : "pending",
+        currentSetupStep: setupCompleted ? "completed" : nextStep,
+        setupCompletedAt: setupCompleted ? getSession()?.setupCompletedAt || new Date().toISOString() : "",
+        onboardingStatusSnapshot: status,
+      });
+
+      const userId = getActiveUserId();
+      clearDriverProfileDraft(userId ?? undefined);
+      setSuccessMessage("Perfil guardado correctamente");
+      navigate(resolveOnboardingRoute(status, getSession()));
+    } catch (error) {
+      setErrors({ form: getApiErrorMessage(error) });
     } finally {
       setIsSubmitting(false);
     }
   };
+
+  if (isLoadingProfile) {
+    return (
+      <SetupLayout activeStep="perfil">
+        <div className="profile-setup">
+          <header className="profile-setup__header">
+            <p>Configuración inicial</p>
+            <h1>Completa tu perfil</h1>
+            <span>Tu información nos ayuda a responder mejor en caso de emergencia.</span>
+          </header>
+          <AlertMessage variant="info">Cargando tu perfil...</AlertMessage>
+        </div>
+      </SetupLayout>
+    );
+  }
 
   return (
     <SetupLayout activeStep="perfil">
@@ -313,7 +418,7 @@ export function ProfileSetup() {
             <Button onClick={handleSaveDraft} type="button" variant="secondary">Guardar borrador</Button>
             <div>
               <Button onClick={() => navigate("/login")} type="button" variant="secondary">Volver</Button>
-              <Button disabled={isSubmitting} isLoading={isSubmitting} loadingText="Guardando..." type="submit">Guardar y continuar</Button>
+              <Button disabled={isSubmitting} isLoading={isSubmitting} loadingText="Guardando perfil..." type="submit">Guardar y continuar</Button>
             </div>
           </div>
         </form>

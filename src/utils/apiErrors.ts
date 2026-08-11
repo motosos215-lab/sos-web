@@ -6,20 +6,21 @@ function messageForStatus(status: number): string {
     case 400:
       return "Revisa los datos ingresados";
     case 401:
+      return "Tu sesión expiró. Inicia sesión nuevamente";
     case 403:
-      return "No fue posible iniciar sesión con esta cuenta";
+      return "Tu cuenta no tiene permisos para realizar esta acción.";
     case 404:
       return "No fue posible iniciar sesión con esta cuenta";
     case 409:
-      return "Los datos que ingresaste ya se encuentran registrados";
+      return "Existe un conflicto con la información registrada. Revisa los datos e inténtalo nuevamente.";
     case 429:
-      return "Realizaste demasiados intentos. Espera un momento antes de volver a intentar";
+      return "Has realizado demasiadas solicitudes. Inténtalo nuevamente más tarde.";
     case 500:
-      return "El servicio de MotoSOS no está disponible temporalmente";
+      return "MotoSOS no está disponible temporalmente.";
     case 501:
       return "Esta función estará disponible próximamente";
     case 503:
-      return "El servicio de MotoSOS no está disponible temporalmente";
+      return "MotoSOS no está disponible temporalmente.";
     default:
       return "Ocurrió un error inesperado. Inténtalo más tarde";
   }
@@ -49,6 +50,10 @@ function messageForCode(code: string): string {
 
 export function getApiErrorMessage(error: unknown): string {
   if (error instanceof ApiRequestError) {
+    if (error.code === "validation_error" && error.message.length > 0) {
+      return error.message;
+    }
+
     if (error.code.startsWith("http_")) {
       const parsed = Number.parseInt(error.code.slice(5), 10);
       return Number.isFinite(parsed) ? messageForStatus(parsed) : "Ocurrió un error inesperado. Inténtalo más tarde";
@@ -69,7 +74,7 @@ export function getApiErrorMessage(error: unknown): string {
 
   if (error instanceof AxiosError) {
     if (error.code === "ECONNABORTED") {
-      return "La solicitud tardó demasiado. Inténtalo nuevamente";
+      return "No fue posible conectar con MotoSOS. Verifica tu conexión e inténtalo nuevamente";
     }
 
     if (!error.response) {

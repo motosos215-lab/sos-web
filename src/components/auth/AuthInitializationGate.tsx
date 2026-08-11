@@ -1,9 +1,10 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useNavigate } from "react-router-dom";
-import { getCurrentUser } from "../../services/authService";
+import { getCurrentUser, mergeAuthenticatedUserWithSetupState, syncRiderOnboardingSession } from "../../services/authService";
 import { clearAuthTokens, getAuthTokens } from "../../services/authTokenService";
 import { ensureFreshAccessToken, setUnauthorizedHandler } from "../../services/api";
 import { clearSession, getActiveUserId } from "../../services/sessionService";
+import { mapApiRoleToAppRole } from "../../utils/authRole";
 import "./AuthInitializationGate.css";
 
 interface AuthInitializationGateProps {
@@ -67,7 +68,20 @@ export function AuthInitializationGate({ children }: AuthInitializationGateProps
           clearAuthTokens(activeUserId);
           clearSession();
           navigate("/login", { replace: true });
+          return;
         }
+
+        const roleResult = mapApiRoleToAppRole(user.role);
+
+        if (!roleResult.ok) {
+          clearAuthTokens(activeUserId);
+          clearSession();
+          navigate("/login", { replace: true });
+          return;
+        }
+
+        const session = mergeAuthenticatedUserWithSetupState(user, roleResult.role);
+        await syncRiderOnboardingSession(session);
 
         setStatus("ready");
       } catch {

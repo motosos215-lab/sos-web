@@ -8,7 +8,7 @@ import { Input } from "../../../components/common/Input/Input";
 import { PasswordInput } from "../../../components/common/PasswordInput/PasswordInput";
 import { AuthLayout } from "../../../layouts/AuthLayout/AuthLayout";
 import { login } from "../../../services/authService";
-import { getSetupStepPath } from "../../../config/setupSteps";
+import { resolveOnboardingRoute } from "../../../services/onboardingService";
 import { getApiErrorMessage } from "../../../utils/apiErrors";
 import "./Login.css";
 
@@ -98,7 +98,7 @@ export function Login() {
       setSuccessMessage("Inicio de sesión correcto");
 
       if (session.role === "conductor" && !session.setupCompleted) {
-        navigate(getSetupStepPath(session.currentSetupStep));
+        navigate(resolveOnboardingRoute(session.onboardingStatusSnapshot ?? {}, session));
         return;
       }
 

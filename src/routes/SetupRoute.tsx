@@ -1,5 +1,6 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { getSetupStepByPath, getSetupStepIndex, getSetupStepPath } from "../config/setupSteps";
+import { resolveOnboardingRoute } from "../services/onboardingService";
 import { getSession } from "../services/sessionService";
 
 export function SetupRoute() {
@@ -18,6 +19,12 @@ export function SetupRoute() {
     return <Navigate to="/dashboard/resumen" replace />;
   }
 
+  const authoritativePath = resolveOnboardingRoute(session.onboardingStatusSnapshot ?? {}, session);
+
+  if (authoritativePath === "/dashboard/resumen") {
+    return <Navigate to={authoritativePath} replace />;
+  }
+
   const requestedStep = getSetupStepByPath(location.pathname);
 
   if (requestedStep?.key === "confirmacion" && !session.planConfigured) {
@@ -29,7 +36,7 @@ export function SetupRoute() {
     const currentIndex = getSetupStepIndex(session.currentSetupStep);
 
     if (requestedIndex > currentIndex) {
-      const currentPath = getSetupStepPath(session.currentSetupStep);
+      const currentPath = authoritativePath || getSetupStepPath(session.currentSetupStep);
 
       if (location.pathname !== currentPath) {
         return <Navigate to={currentPath} replace />;

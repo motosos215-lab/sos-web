@@ -1,4 +1,5 @@
 import type { LicenseType, PlanId, PlanStatus } from "../types/plan";
+import type { OnboardingStatus } from "../types/onboarding";
 
 export type UserRole = "conductor" | "monitor" | "administrador";
 export type SimulatedPlan = PlanId;
@@ -41,6 +42,7 @@ export interface SimulatedSession {
   smartwatchLinked: boolean;
   mobileDeviceId: string | null;
   smartwatchDeviceId: string | null;
+  onboardingStatusSnapshot?: OnboardingStatus;
 }
 
 const LEGACY_SESSION_KEY = "motosos.simulatedSession";
@@ -90,6 +92,28 @@ function isLicenseType(value: unknown): value is LicenseType {
 
 function isAccountStatus(value: unknown): value is AccountStatus {
   return value === "active" || value === "pending" || value === "inactive";
+}
+
+function isOnboardingStatusSnapshot(value: unknown): value is OnboardingStatus {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return false;
+  }
+
+  const snapshot = value as Partial<OnboardingStatus>;
+  const optionalBooleans = [
+    snapshot.isCompleted,
+    snapshot.isConfirmed,
+    snapshot.profileCompleted,
+    snapshot.vehicleCompleted,
+    snapshot.emergencyContactsCompleted,
+    snapshot.devicesCompleted,
+    snapshot.planCompleted,
+  ];
+
+  return (
+    (snapshot.currentStep === undefined || isSetupStepKey(snapshot.currentStep)) &&
+    optionalBooleans.every((item) => item === undefined || typeof item === "boolean")
+  );
 }
 
 function parseSession(value: string): SimulatedSession | null {
@@ -144,6 +168,9 @@ function parseSession(value: string): SimulatedSession | null {
       smartwatchLinked: typeof parsed.smartwatchLinked === "boolean" ? parsed.smartwatchLinked : false,
       mobileDeviceId: typeof parsed.mobileDeviceId === "string" ? parsed.mobileDeviceId : null,
       smartwatchDeviceId: typeof parsed.smartwatchDeviceId === "string" ? parsed.smartwatchDeviceId : null,
+      onboardingStatusSnapshot: isOnboardingStatusSnapshot(parsed.onboardingStatusSnapshot)
+        ? parsed.onboardingStatusSnapshot
+        : undefined,
     };
   } catch {
     return null;

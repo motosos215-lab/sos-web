@@ -41,6 +41,14 @@ export interface LoginCredentials {
   rememberMe: boolean;
 }
 
+export interface LoginData {
+  accessToken: string;
+  refreshToken: string;
+  accessTokenExpiresAtUtc: string;
+  refreshTokenExpiresAtUtc?: string;
+  user: ApiUserProfile;
+}
+
 export type RegisterAccountType = "Conductor" | "Monitor";
 
 export interface RegisterRequest {
