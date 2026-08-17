@@ -1,10 +1,26 @@
 import { describe, expect, it } from "vitest";
+import { AxiosError, type AxiosResponse } from "axios";
 import { ApiRequestError } from "../services/api";
 import { getApiErrorMessage } from "./apiErrors";
 
 describe("getApiErrorMessage", () => {
   it("maps invalid credentials to a safe user-facing message", () => {
     expect(getApiErrorMessage(new ApiRequestError("invalid_credentials", "raw", 401))).toBe("El correo o la contraseña son incorrectos");
+  });
+
+  it("maps backend error codes from axios responses", () => {
+    const response = {
+      data: {
+        success: false,
+        data: null,
+        error: { code: "invalid_credentials", message: "Invalid authentication credentials." },
+      },
+      status: 401,
+    } as AxiosResponse;
+
+    expect(getApiErrorMessage(new AxiosError("Request failed", "ERR_BAD_REQUEST", undefined, undefined, response))).toBe(
+      "El correo o la contraseña son incorrectos",
+    );
   });
 
   it("preserves backend validation messages", () => {

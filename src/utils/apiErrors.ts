@@ -126,7 +126,17 @@ export function getApiErrorMessage(error: unknown): string {
       return "No fue posible conectar con MotoSOS. Verifica tu conexión e inténtalo nuevamente";
     }
 
-    const body = error.response.data as { error?: { message?: unknown }; message?: unknown } | undefined;
+    const body = error.response.data as { error?: { code?: unknown; message?: unknown }; message?: unknown } | undefined;
+    const code = typeof body?.error?.code === "string" ? body.error.code : "";
+
+    if (code.length > 0) {
+      const coded = messageForCode(code);
+
+      if (coded) {
+        return coded;
+      }
+    }
+
     const message = typeof body?.error?.message === "string" ? body.error.message : typeof body?.message === "string" ? body.message : "";
 
     return message.length > 0 ? messageForBackendText(message) || message : messageForStatus(error.response.status);
