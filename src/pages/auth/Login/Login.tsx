@@ -88,7 +88,7 @@ export function Login() {
 
     try {
       const session = await login({
-        email: values.email.trim(),
+        email: values.email.trim().toLowerCase(),
         password: values.password,
         rememberMe: values.remember,
       });
@@ -148,9 +148,12 @@ export function Login() {
           {errors.form ? <AlertMessage variant="error">{errors.form}</AlertMessage> : null}
 
           <Input
+            autoCapitalize="none"
             autoComplete="email"
+            autoCorrect="off"
             error={errors.email}
             id="email"
+            inputMode="email"
             label="Correo electrónico"
             name="email"
             onChange={(event) => {
@@ -160,12 +163,15 @@ export function Login() {
               }
             }}
             placeholder="tu@email.com"
+            spellCheck={false}
             type="email"
             value={values.email}
           />
 
           <PasswordInput
+            autoCapitalize="none"
             autoComplete="current-password"
+            autoCorrect="off"
             error={errors.password}
             id="password"
             label="Contraseña"
@@ -177,6 +183,7 @@ export function Login() {
               }
             }}
             placeholder="Mínimo 8 caracteres"
+            spellCheck={false}
             value={values.password}
           />
 
