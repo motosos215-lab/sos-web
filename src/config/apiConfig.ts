@@ -3,6 +3,10 @@ const DEFAULT_TIMEOUT_MS = 15000;
 function readBaseUrl(): string {
   const rawUrl = import.meta.env.VITE_API_BASE_URL ?? "";
 
+  if (typeof window !== "undefined" && window.location.hostname.endsWith("netlify.app")) {
+    return "/api";
+  }
+
   return typeof rawUrl === "string" ? rawUrl.trim().replace(/\/+$/, "") : "";
 }
 
