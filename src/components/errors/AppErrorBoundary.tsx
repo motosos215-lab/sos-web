@@ -8,26 +8,52 @@ interface AppErrorBoundaryProps {
 interface AppErrorBoundaryState {
   errorName: string;
   hasError: boolean;
+  shouldReload: boolean;
+}
+
+function isChunkLoadError(error: Error): boolean {
+  const text = `${error.name} ${error.message}`.toLowerCase();
+
+  return text.includes("chunk") || text.includes("dynamic import") || text.includes("failed to fetch dynamically imported module");
 }
 
 export class AppErrorBoundary extends Component<AppErrorBoundaryProps, AppErrorBoundaryState> {
   state: AppErrorBoundaryState = {
     errorName: "",
     hasError: false,
+    shouldReload: false,
   };
 
   static getDerivedStateFromError(error: Error): AppErrorBoundaryState {
     return {
       errorName: error.name || "Error",
       hasError: true,
+      shouldReload: isChunkLoadError(error),
     };
   }
 
-  componentDidCatch(_error: Error, _errorInfo: ErrorInfo) {
+  componentDidCatch(error: Error, _errorInfo: ErrorInfo) {
     // React keeps the app recoverable here. Sensitive data is intentionally not logged.
+    if (!isChunkLoadError(error)) {
+      return;
+    }
+
+    const reloadKey = `motosos.chunkReload.${window.location.pathname}`;
+
+    if (window.sessionStorage.getItem(reloadKey)) {
+      return;
+    }
+
+    window.sessionStorage.setItem(reloadKey, "1");
+    window.location.reload();
   }
 
   private retry = () => {
+    if (this.state.shouldReload) {
+      window.location.reload();
+      return;
+    }
+
     this.setState({ errorName: "", hasError: false });
   };
 
@@ -62,7 +88,7 @@ export class AppErrorBoundary extends Component<AppErrorBoundaryProps, AppErrorB
           {import.meta.env.DEV && this.state.errorName ? <small>Error detectado: {this.state.errorName}</small> : null}
           <div className="app-error__actions">
             <button onClick={this.retry} type="button">
-              Reintentar
+              {this.state.shouldReload ? "Actualizar aplicación" : "Reintentar"}
             </button>
             <button onClick={this.goToLogin} type="button">
               Ir al inicio de sesión

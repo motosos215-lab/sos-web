@@ -1,4 +1,5 @@
 /health https://motosos-api-tcrg6.ondigitalocean.app/health 200
 /health/ready https://motosos-api-tcrg6.ondigitalocean.app/health/ready 200
 /api/* https://motosos-api-tcrg6.ondigitalocean.app/api/:splat 200
+/assets/* /404.html 404
 /* /index.html 200
