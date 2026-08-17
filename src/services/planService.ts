@@ -1,12 +1,17 @@
 import type {
   BusinessLicenseRequestState,
+  LicenseType,
   MotoSosPlan,
   PlanConfirmationState,
   PlanId,
   PlanServiceResponse,
+  PlanStatus,
   UserPlanState,
 } from "../types/plan";
+import type { ApiResponse } from "../types/auth";
+import { api, unwrap } from "./api";
 import { getSession } from "./sessionService";
+import { getApiErrorMessage } from "../utils/apiErrors";
 
 const nowIso = new Date().toISOString();
 
@@ -72,44 +77,163 @@ export const availablePlans: MotoSosPlan[] = [
   },
 ];
 
-function wait(milliseconds: number) {
-  return new Promise((resolve) => {
-    window.setTimeout(resolve, milliseconds);
-  });
-}
-
 function getActivatedAt() {
   return getSession()?.planActivatedAt ?? nowIso;
 }
 
-export async function getAvailablePlans(): Promise<PlanServiceResponse<MotoSosPlan[]>> {
-  await wait(350);
+type PlanApiRecord = Record<string, unknown>;
+
+function normalizePlanId(value: unknown): PlanId {
+  const normalized =
+    typeof value === "string"
+      ? value
+          .trim()
+          .toLowerCase()
+          .replace(/[\s-]+/g, "_")
+      : "";
+
+  if (normalized === "plus") {
+    return "plus";
+  }
+
+  if (normalized === "family" || normalized === "familiar" || normalized === "familiar_pro" || normalized === "pro") {
+    return "familiar_pro";
+  }
+
+  return "basico";
+}
+
+function normalizePlanStatus(value: unknown, fallback: PlanStatus): PlanStatus {
+  switch (typeof value === "string" ? value.toLowerCase() : "") {
+    case "active":
+    case "activo":
+      return "active";
+    case "pending":
+      return "pending";
+    case "expired":
+      return "expired";
+    case "cancelled":
+    case "canceled":
+      return "cancelled";
+    case "available":
+      return "available";
+    default:
+      return fallback;
+  }
+}
+
+function normalizeLicenseType(value: unknown, fallback: LicenseType): LicenseType {
+  switch (typeof value === "string" ? value.toLowerCase() : "") {
+    case "family":
+      return "family";
+    case "business":
+      return "business";
+    case "individual":
+      return "individual";
+    default:
+      return fallback;
+  }
+}
+
+function readNumber(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+function toPlan(record: PlanApiRecord, fallback?: MotoSosPlan): MotoSosPlan {
+  const id = normalizePlanId(record.id ?? record.tier ?? record.planTier ?? fallback?.id);
+  const limits = record.limits && typeof record.limits === "object" ? (record.limits as Record<string, unknown>) : {};
+  const benefits = Array.isArray(record.benefits) ? record.benefits.filter((item): item is string => typeof item === "string") : [];
 
   return {
-    success: true,
-    message: "Planes obtenidos correctamente",
-    data: availablePlans,
+    id,
+    name:
+      typeof record.name === "string"
+        ? record.name
+        : (fallback?.name ?? (id === "basico" ? "Básico" : id === "plus" ? "Plus" : "Familiar / Pro")),
+    description: typeof record.description === "string" ? record.description : (fallback?.description ?? "Protección MotoSOS"),
+    status: normalizePlanStatus(record.status, fallback?.status ?? (id === "basico" ? "active" : "available")),
+    licenseType: normalizeLicenseType(record.licenseType, fallback?.licenseType ?? (id === "familiar_pro" ? "family" : "individual")),
+    features:
+      benefits.length > 0 ? benefits.map((label, index) => ({ id: `${id}-${index}`, label, included: true })) : (fallback?.features ?? []),
+    upgradeAvailableInApp:
+      typeof record.isSelectableInWeb === "boolean" ? !record.isSelectableInWeb : (fallback?.upgradeAvailableInApp ?? id !== "basico"),
+    contactLimit:
+      readNumber(record.contactLimit) ?? readNumber(limits.maxEmergencyContacts) ?? fallback?.contactLimit ?? (id === "basico" ? 1 : null),
+    vehicleLimit:
+      readNumber(record.vehicleLimit) ?? readNumber(limits.maxVehicles) ?? fallback?.vehicleLimit ?? (id === "basico" ? 1 : null),
+    driverLimit: readNumber(record.driverLimit) ?? fallback?.driverLimit ?? (id === "familiar_pro" ? null : 1),
   };
 }
 
-export async function getCurrentPlan(): Promise<PlanServiceResponse<UserPlanState>> {
-  await wait(500);
-  const session = getSession();
+function readPlanRecords(value: unknown): PlanApiRecord[] {
+  if (Array.isArray(value)) {
+    return value.filter((item): item is PlanApiRecord => Boolean(item) && typeof item === "object");
+  }
+
+  if (!value || typeof value !== "object") {
+    return [];
+  }
+
+  const source = value as Record<string, unknown>;
+  const candidates = [source.plans, source.catalog, source.items];
+  const match = candidates.find(Array.isArray);
+
+  return Array.isArray(match) ? match.filter((item): item is PlanApiRecord => Boolean(item) && typeof item === "object") : [];
+}
+
+function toUserPlanState(value: unknown): UserPlanState {
+  const source = value && typeof value === "object" ? (value as Record<string, unknown>) : {};
+  const subscription =
+    source.subscription && typeof source.subscription === "object" ? (source.subscription as Record<string, unknown>) : null;
+  const defaultPlan = source.defaultPlan && typeof source.defaultPlan === "object" ? (source.defaultPlan as Record<string, unknown>) : null;
+  const planTier = subscription?.planTier ?? subscription?.tier ?? defaultPlan?.tier ?? "Basic";
+  const limits = defaultPlan?.limits && typeof defaultPlan.limits === "object" ? (defaultPlan.limits as Record<string, unknown>) : {};
 
   return {
-    success: true,
-    message: "Plan actual obtenido correctamente",
-    data: {
-      currentPlan: session?.plan ?? "basico",
-      status: session?.planStatus ?? "active",
-      contactLimit: session?.contactLimit ?? 1,
-      vehicleLimit: session?.vehicleLimit ?? 1,
-      driverLimit: session?.driverLimit ?? 1,
-      licenseType: session?.licenseType ?? "individual",
-      activatedAt: getActivatedAt(),
-      expiresAt: null,
-    },
+    currentPlan: normalizePlanId(planTier),
+    status: subscription ? normalizePlanStatus(subscription.status, "active") : "active",
+    activatedAt: typeof subscription?.startedAtUtc === "string" ? subscription.startedAtUtc : getActivatedAt(),
+    expiresAt: typeof subscription?.expiresAtUtc === "string" ? subscription.expiresAtUtc : null,
+    contactLimit: readNumber(limits.maxEmergencyContacts) ?? 1,
+    vehicleLimit: readNumber(limits.maxVehicles) ?? 1,
+    driverLimit: 1,
+    licenseType: "individual",
   };
+}
+
+export async function getAvailablePlans(): Promise<PlanServiceResponse<MotoSosPlan[]>> {
+  try {
+    const response = await api.get<ApiResponse<unknown>>("/api/v1/plans");
+    const records = readPlanRecords(unwrap<unknown>(response));
+    const plans =
+      records.length > 0
+        ? availablePlans.map((fallback) =>
+            toPlan(records.find((record) => normalizePlanId(record.id ?? record.tier ?? record.planTier) === fallback.id) ?? {}, fallback),
+          )
+        : availablePlans;
+
+    return {
+      success: true,
+      message: "Planes obtenidos correctamente",
+      data: plans,
+    };
+  } catch (error) {
+    return { success: false, message: getApiErrorMessage(error), data: null };
+  }
+}
+
+export async function getCurrentPlan(): Promise<PlanServiceResponse<UserPlanState>> {
+  try {
+    const response = await api.get<ApiResponse<unknown>>("/api/v1/subscriptions/me");
+
+    return {
+      success: true,
+      message: "Plan actual obtenido correctamente",
+      data: toUserPlanState(unwrap<unknown>(response)),
+    };
+  } catch (error) {
+    return { success: false, message: getApiErrorMessage(error), data: null };
+  }
 }
 
 export async function confirmCurrentPlan(planId: PlanId): Promise<PlanServiceResponse<PlanConfirmationState>> {
@@ -121,34 +245,37 @@ export async function confirmCurrentPlan(planId: PlanId): Promise<PlanServiceRes
     };
   }
 
-  await wait(700);
+  try {
+    const response = await api.post<ApiResponse<unknown>>("/api/v1/subscriptions/select-basic", {});
+    const data = unwrap<unknown>(response);
+    const current = toUserPlanState(data);
 
-  return {
-    success: true,
-    message: "Plan Básico confirmado correctamente",
-    data: {
-      planId: "basico",
-      status: "active",
-      completed: true,
-      nextStep: "confirmacion",
-    },
-  };
+    return {
+      success: true,
+      message: "Plan Básico confirmado correctamente",
+      data: {
+        planId: current.currentPlan,
+        status: current.status,
+        completed: true,
+        nextStep: "confirmacion",
+      },
+    };
+  } catch (error) {
+    return { success: false, message: getApiErrorMessage(error), data: null };
+  }
 }
 
 export async function refreshPlanStatus(): Promise<PlanServiceResponse<UserPlanState>> {
-  await wait(500);
   return getCurrentPlan();
 }
 
 export async function requestBusinessLicenseInformation(): Promise<PlanServiceResponse<BusinessLicenseRequestState>> {
-  await wait(400);
-
   return {
     success: true,
-    message: "La solicitud empresarial estará disponible en una etapa posterior",
+    message: "Para licencias empresariales, contacta a soporte MotoSOS y te ayudaremos con la solicitud",
     data: {
       requested: true,
-      message: "La solicitud empresarial estará disponible en una etapa posterior",
+      message: "Para licencias empresariales, contacta a soporte MotoSOS y te ayudaremos con la solicitud",
     },
   };
 }

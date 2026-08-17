@@ -28,10 +28,22 @@ export function InvitationPanel({
     <aside className="invitation-panel" aria-labelledby="invitation-panel-title">
       <h2 id="invitation-panel-title">Invitación y vinculación</h2>
       <ol className="invitation-panel__steps">
-        <li><strong>Invita al contacto.</strong><span>Envía la invitación por correo electrónico, SMS o comparte el código.</span></li>
-        <li><strong>El contacto recibe la invitación.</strong><span>Puede abrir el enlace o ingresar el código en la app.</span></li>
-        <li><strong>Descarga MotoSOS y elige modo Monitor.</strong><span>El contacto acepta la invitación desde la aplicación.</span></li>
-        <li><strong>Ingresa el código y queda vinculado.</strong><span>El conductor puede revisar el estado desde la web.</span></li>
+        <li>
+          <strong>Invita al contacto.</strong>
+          <span>Envía la invitación por correo electrónico, SMS o comparte el código.</span>
+        </li>
+        <li>
+          <strong>El contacto recibe la invitación.</strong>
+          <span>Puede abrir el enlace o ingresar el código en la app.</span>
+        </li>
+        <li>
+          <strong>Descarga MotoSOS y elige modo Monitor.</strong>
+          <span>El contacto acepta la invitación desde la aplicación.</span>
+        </li>
+        <li>
+          <strong>Ingresa el código y queda vinculado.</strong>
+          <span>El conductor puede revisar el estado desde la web.</span>
+        </li>
       </ol>
 
       <section className="invitation-panel__code" aria-labelledby="invitation-code-title">
@@ -41,7 +53,7 @@ export function InvitationPanel({
           <>
             <code>{contact.invitationCode}</code>
             <InvitationCountdown expiresAt={contact.invitationExpiresAt} onExpire={onExpire} />
-            <div className="invitation-panel__qr" role="img" aria-label="Código QR con el enlace simulado de invitación">
+            <div className="invitation-panel__qr" role="img" aria-label="Código QR con el enlace de invitación">
               <QRCodeSVG value={contact.invitationLink} size={156} />
             </div>
             <div className="invitation-panel__actions">

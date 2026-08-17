@@ -1,5 +1,5 @@
 import { FormEvent, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { AlertMessage } from "../../../components/common/AlertMessage/AlertMessage";
 import { Button } from "../../../components/common/Button/Button";
 import { Input } from "../../../components/common/Input/Input";
@@ -28,6 +28,7 @@ function validateEmail(email: string) {
 }
 
 export function ForgotPassword() {
+  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [errors, setErrors] = useState<ForgotPasswordErrors>({});
   const [successMessage, setSuccessMessage] = useState("");
@@ -55,6 +56,7 @@ export function ForgotPassword() {
     try {
       await forgotPassword(normalizedEmail);
       setSuccessMessage("Si el correo está registrado, recibirás instrucciones para recuperar tu contraseña");
+      window.setTimeout(() => navigate("/restablecer-contrasena", { state: { email: normalizedEmail } }), 700);
     } catch (error) {
       setErrors({ form: getApiErrorMessage(error) });
     } finally {
@@ -70,9 +72,7 @@ export function ForgotPassword() {
           <h1 id="forgot-password-title">Recuperar contraseña</h1>
         </div>
 
-        <p className="forgot-card__description">
-          Ingresa tu correo y te enviaremos un código para restablecer tu contraseña
-        </p>
+        <p className="forgot-card__description">Ingresa tu correo y te enviaremos un código para restablecer tu contraseña</p>
 
         <form className="forgot-form" noValidate onSubmit={handleSubmit}>
           {errors.form ? <AlertMessage variant="error">{errors.form}</AlertMessage> : null}
@@ -95,12 +95,7 @@ export function ForgotPassword() {
             value={email}
           />
 
-          <Button
-            disabled={isSubmitting}
-            isLoading={isSubmitting}
-            loadingText="Enviando código..."
-            type="submit"
-          >
+          <Button disabled={isSubmitting} isLoading={isSubmitting} loadingText="Enviando código..." type="submit">
             Enviar código
           </Button>
         </form>

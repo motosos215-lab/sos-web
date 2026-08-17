@@ -8,20 +8,15 @@ function tokenKeyFor(userId: string): string {
 }
 
 function normalizeTokens(parsed: Partial<AuthTokens>): AuthTokens | null {
-  if (
-    typeof parsed.accessToken !== "string" ||
-    typeof parsed.refreshToken !== "string"
-  ) {
+  if (typeof parsed.accessToken !== "string" || typeof parsed.refreshToken !== "string") {
     return null;
   }
 
   return {
     accessToken: parsed.accessToken,
     refreshToken: parsed.refreshToken,
-    accessTokenExpiresAtUtc:
-      typeof parsed.accessTokenExpiresAtUtc === "string" ? parsed.accessTokenExpiresAtUtc : undefined,
-    refreshTokenExpiresAtUtc:
-      typeof parsed.refreshTokenExpiresAtUtc === "string" ? parsed.refreshTokenExpiresAtUtc : undefined,
+    accessTokenExpiresAtUtc: typeof parsed.accessTokenExpiresAtUtc === "string" ? parsed.accessTokenExpiresAtUtc : undefined,
+    refreshTokenExpiresAtUtc: typeof parsed.refreshTokenExpiresAtUtc === "string" ? parsed.refreshTokenExpiresAtUtc : undefined,
   };
 }
 

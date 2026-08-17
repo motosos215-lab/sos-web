@@ -1,6 +1,6 @@
 import { AxiosError } from "axios";
 import type { ApiResponse } from "../types/auth";
-import { api, unwrap } from "./api";
+import { ApiRequestError, api, unwrap } from "./api";
 
 export interface EmergencyContactDraft {
   fullName: string;
@@ -22,7 +22,25 @@ export interface DriverProfileFormData {
   licenseFile: File | null;
 }
 
-export type ProfileSaveMode = "Complete";
+export type ProfileSaveMode = "Continue";
+
+function normalizePhone(phone: string) {
+  return phone.replace(/\D/g, "").slice(0, 10);
+}
+
+function readProfilePayload(value: unknown): MyProfile | null {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+
+  const source = value as { profile?: unknown } & MyProfile;
+
+  if (source.profile && typeof source.profile === "object") {
+    return source.profile as MyProfile;
+  }
+
+  return source;
+}
 
 export interface MyProfile {
   fullName?: string;
@@ -56,7 +74,7 @@ export interface SaveMyProfilePayload {
 export function mapDriverProfileFormToPayload(data: DriverProfileFormData): SaveMyProfilePayload {
   return {
     fullName: data.fullName.trim(),
-    phoneNumber: data.phone.trim(),
+    phoneNumber: normalizePhone(data.phone),
     dateOfBirth: data.birthDate,
     curpOrIdentifier: data.personalId.trim(),
     addressOrZone: data.address.trim(),
@@ -65,8 +83,8 @@ export function mapDriverProfileFormToPayload(data: DriverProfileFormData): Save
     allergies: "",
     medicalConditions: data.medicalConditions.trim(),
     provisionalEmergencyContactName: data.emergencyContact.fullName.trim(),
-    provisionalEmergencyContactPhone: data.emergencyContact.phone.trim(),
-    saveMode: "Complete",
+    provisionalEmergencyContactPhone: normalizePhone(data.emergencyContact.phone),
+    saveMode: "Continue",
   };
 }
 
@@ -75,7 +93,7 @@ export async function getMyProfile(): Promise<MyProfile | null> {
     const response = await api.get<ApiResponse<unknown>>("/api/v1/profiles/me");
     const data = unwrap<unknown>(response);
 
-    return data && typeof data === "object" ? (data as MyProfile) : null;
+    return readProfilePayload(data);
   } catch (error) {
     if (error instanceof AxiosError && error.response?.status === 404) {
       return null;
@@ -89,5 +107,11 @@ export async function saveMyProfile(payload: SaveMyProfilePayload): Promise<MyPr
   const response = await api.put<ApiResponse<unknown>>("/api/v1/profiles/me", payload);
   const data = unwrap<unknown>(response);
 
-  return data && typeof data === "object" ? (data as MyProfile) : null;
+  const profile = readProfilePayload(data);
+
+  if (!profile) {
+    throw new ApiRequestError("invalid_response", "No pudimos confirmar que el perfil se guardara correctamente", response.status);
+  }
+
+  return profile;
 }

@@ -59,6 +59,11 @@ export function ContactFormModal({
   values,
 }: ContactFormModalProps) {
   const dialogRef = useRef<HTMLDivElement | null>(null);
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -67,7 +72,7 @@ export function ContactFormModal({
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        onClose();
+        onCloseRef.current();
         return;
       }
 
@@ -97,17 +102,11 @@ export function ContactFormModal({
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
+  }, []);
 
   return (
     <div className="contact-modal" role="presentation">
-      <div
-        aria-labelledby="contact-form-title"
-        aria-modal="true"
-        className="contact-modal__dialog"
-        ref={dialogRef}
-        role="dialog"
-      >
+      <div aria-labelledby="contact-form-title" aria-modal="true" className="contact-modal__dialog" ref={dialogRef} role="dialog">
         <header className="contact-modal__header">
           <div>
             <p>Contacto de emergencia</p>
@@ -159,12 +158,13 @@ export function ContactFormModal({
               data-field="phone"
               error={errors.phone}
               id="contactPhone"
-              inputMode="tel"
+              inputMode="numeric"
               label="Teléfono"
-              maxLength={24}
+              maxLength={10}
               name="phone"
-              onChange={(event) => onChange("phone", event.target.value)}
-              type="tel"
+              onChange={(event) => onChange("phone", event.target.value.replace(/\D/g, "").slice(0, 10))}
+              pattern="[0-9]{10}"
+              type="text"
               value={values.phone}
             />
             <Input
@@ -202,9 +202,7 @@ export function ContactFormModal({
             />
           </div>
 
-          <p className="contact-modal__info">
-            La invitación permitirá que el contacto se vincule desde la app MotoSOS en modo monitor.
-          </p>
+          <p className="contact-modal__info">La invitación permitirá que el contacto se vincule desde la app MotoSOS en modo monitor.</p>
 
           <ContactPermissionSwitches
             criticalAlertMessage={criticalAlertMessage}

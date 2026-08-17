@@ -1,11 +1,7 @@
 export const ACCESS_TOKEN_EXPIRY_MARGIN_MS = 30000;
 
 function isValidDateLike(value: unknown): value is string | number | Date {
-  return (
-    (typeof value === "string" && value.length > 0) ||
-    typeof value === "number" ||
-    value instanceof Date
-  );
+  return (typeof value === "string" && value.length > 0) || typeof value === "number" || value instanceof Date;
 }
 
 export function parseDate(value: unknown): Date | null {

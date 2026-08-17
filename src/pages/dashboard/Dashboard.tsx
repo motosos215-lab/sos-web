@@ -19,16 +19,16 @@ export function Dashboard() {
         <div className="dashboard-card__logo" aria-hidden="true">
           MS
         </div>
-        <p className="dashboard-card__eyebrow">Sesión simulada</p>
+        <p className="dashboard-card__eyebrow">Sesión activa</p>
         <h1 id="dashboard-title">Dashboard MotoSOS</h1>
-        <p>El dashboard se implementará en una etapa posterior</p>
+        <p>Consulta tu resumen operativo y configuración de MotoSOS.</p>
         {session ? <strong>{session.name}</strong> : null}
         <div className="dashboard-card__actions">
           <Button onClick={handleLogout} type="button" variant="secondary">
             Cerrar sesión
           </Button>
-          <Button onClick={() => navigate("/configuracion/perfil")} type="button">
-            Ir a configuración de perfil
+          <Button onClick={() => navigate("/dashboard/resumen")} type="button">
+            Ir al resumen
           </Button>
         </div>
       </section>

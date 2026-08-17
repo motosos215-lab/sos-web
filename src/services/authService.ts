@@ -28,11 +28,7 @@ const ROLE_INCOMPATIBLE_MESSAGE = "Tu cuenta tiene un rol que todavía no es com
 
 function assertApiBaseUrl() {
   if (!hasApiBaseUrl()) {
-    throw new ApiRequestError(
-      "missing_config",
-      "La aplicación no tiene configurada la dirección del servicio",
-      null,
-    );
+    throw new ApiRequestError("missing_config", "La aplicación no tiene configurada la dirección del servicio", null);
   }
 }
 
@@ -259,16 +255,20 @@ export async function login(credentials: LoginCredentials): Promise<SimulatedSes
     rememberMe: credentials.rememberMe,
   });
 
-  const tokens = extractLoginTokens(response.data);
+  return createSessionFromLoginResponse(response.data, response.status);
+}
+
+async function createSessionFromLoginResponse(body: ApiResponse<LoginData> | null, status: number): Promise<SimulatedSession> {
+  const tokens = extractLoginTokens(body);
 
   if (!tokens) {
-    throw new ApiRequestError("invalid_response", "Recibimos una respuesta inesperada del servicio", response.status);
+    throw new ApiRequestError("invalid_response", "Recibimos una respuesta inesperada del servicio", status);
   }
 
-  const loginUser = extractUserFromEnvelope(response.data);
+  const loginUser = extractUserFromEnvelope(body);
 
   if (!loginUser) {
-    throw new ApiRequestError("invalid_response", "Recibimos una respuesta inesperada del servicio", response.status);
+    throw new ApiRequestError("invalid_response", "Recibimos una respuesta inesperada del servicio", status);
   }
 
   if (loginUser.isActive !== true) {
@@ -328,6 +328,20 @@ export async function forgotPassword(email: string): Promise<void> {
   });
 }
 
+export async function resetPassword(email: string, code: string, newPassword: string): Promise<void> {
+  assertApiBaseUrl();
+
+  const response = await publicApi.post<ApiResponse<unknown>>("/api/v1/auth/reset-password", {
+    email,
+    code,
+    newPassword,
+  });
+
+  if (response.status !== 204) {
+    unwrap<unknown>(response);
+  }
+}
+
 export async function logout(): Promise<void> {
   const userId = getActiveUserId();
 
@@ -360,19 +374,11 @@ export async function requestAccessCode(email: string): Promise<void> {
 }
 
 export async function loginWithCode(_request: LoginWithCodeRequest): Promise<LoginWithCodeResult> {
-  try {
-    assertApiBaseUrl();
-    const response = await publicApi.post<ApiResponse<unknown>>("/api/v1/auth/login-with-code", {
-      code: _request.code,
-    });
-    unwrap<unknown>(response);
-  } catch (error) {
-    if (error instanceof ApiRequestError && error.code === "http_501") {
-      return {};
-    }
-
-    throw error;
-  }
-
+  assertApiBaseUrl();
+  const response = await publicApi.post<ApiResponse<LoginData>>("/api/v1/auth/login-with-code", {
+    email: _request.email,
+    code: _request.code,
+  });
+  await createSessionFromLoginResponse(response.data, response.status);
   return {};
 }

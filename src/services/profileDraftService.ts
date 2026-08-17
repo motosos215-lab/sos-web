@@ -28,11 +28,7 @@ function isEmergencyContactDraft(value: unknown): value is EmergencyContactDraft
   }
 
   const contact = value as Partial<EmergencyContactDraft>;
-  return (
-    typeof contact.fullName === "string" &&
-    typeof contact.relationship === "string" &&
-    typeof contact.phone === "string"
-  );
+  return typeof contact.fullName === "string" && typeof contact.relationship === "string" && typeof contact.phone === "string";
 }
 
 function parseDraft(value: string): DriverProfileDraft | null {

@@ -16,13 +16,7 @@ export function Input({ className = "", error, id, label, ...props }: InputProps
       <label className="input-field__label" htmlFor={id}>
         {label}
       </label>
-      <input
-        {...inputProps}
-        aria-describedby={describedBy}
-        aria-invalid={Boolean(error)}
-        className="input-field__control"
-        id={id}
-      />
+      <input {...inputProps} aria-describedby={describedBy} aria-invalid={Boolean(error)} className="input-field__control" id={id} />
       {error ? (
         <p className="input-field__error" id={errorId} role="alert">
           {error}

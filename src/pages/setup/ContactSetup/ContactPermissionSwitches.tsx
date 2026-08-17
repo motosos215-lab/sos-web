@@ -36,12 +36,7 @@ const permissionOptions: PermissionOption[] = [
   },
 ];
 
-export function ContactPermissionSwitches({
-  criticalAlertMessage,
-  onChange,
-  permissions,
-  priority,
-}: ContactPermissionSwitchesProps) {
+export function ContactPermissionSwitches({ criticalAlertMessage, onChange, permissions, priority }: ContactPermissionSwitchesProps) {
   return (
     <fieldset className="contact-permissions">
       <legend>Permisos</legend>

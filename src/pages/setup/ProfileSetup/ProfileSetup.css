@@ -40,6 +40,7 @@
 .profile-setup__form {
   display: grid;
   gap: 1rem;
+  overflow-anchor: none;
 }
 
 .profile-setup__grid {
@@ -55,7 +56,16 @@
 }
 
 .profile-setup__security-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: start;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
+}
+
+.profile-setup__security-grid .input-field,
+.profile-setup__grid .input-field,
+.profile-setup__grid .select-field,
+.profile-setup__grid .textarea-field {
+  min-width: 0;
+  scroll-margin-top: 1rem;
 }
 
 .profile-setup__hint,

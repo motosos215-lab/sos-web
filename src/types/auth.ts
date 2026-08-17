@@ -16,12 +16,7 @@ export interface AuthTokens {
   refreshTokenExpiresAtUtc?: string;
 }
 
-export type ApiRole =
-  | "Rider"
-  | "Conductor"
-  | "Monitor"
-  | "Administrator"
-  | "Admin";
+export type ApiRole = "Rider" | "Conductor" | "Monitor" | "Administrator" | "Admin";
 
 export interface ApiUserProfile {
   id: string;
@@ -82,6 +77,7 @@ export interface RequestAccessCodeResult {
 }
 
 export interface LoginWithCodeRequest {
+  email: string;
   code: string;
 }
 

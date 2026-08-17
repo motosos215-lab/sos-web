@@ -16,7 +16,7 @@ export function SetupRoute() {
   }
 
   if (session.setupCompleted) {
-    return <Navigate to="/dashboard/resumen" replace />;
+    return <Outlet />;
   }
 
   const authoritativePath = resolveOnboardingRoute(session.onboardingStatusSnapshot ?? {}, session);

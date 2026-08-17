@@ -143,7 +143,9 @@
 .plan-card--current {
   border-color: rgba(18, 160, 92, 0.65);
   background: rgba(24, 169, 87, 0.025);
-  box-shadow: 0 0 0 4px rgba(24, 169, 87, 0.1), 0 12px 36px rgba(16, 24, 40, 0.06);
+  box-shadow:
+    0 0 0 4px rgba(24, 169, 87, 0.1),
+    0 12px 36px rgba(16, 24, 40, 0.06);
 }
 
 .plan-card--theme-basico {

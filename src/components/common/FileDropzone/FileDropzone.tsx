@@ -31,12 +31,7 @@ function getFileExtension(fileName: string) {
   return extensionStart >= 0 ? fileName.slice(extensionStart).toLowerCase() : "";
 }
 
-function validateFile(
-  file: File,
-  allowedExtensions: readonly string[],
-  allowedMimeTypes: readonly string[],
-  invalidTypeMessage: string,
-) {
+function validateFile(file: File, allowedExtensions: readonly string[], allowedMimeTypes: readonly string[], invalidTypeMessage: string) {
   const hasAllowedExtension = allowedExtensions.includes(getFileExtension(file.name));
   const hasAllowedMimeType = !file.type || allowedMimeTypes.includes(file.type);
 
@@ -134,9 +129,7 @@ export function FileDropzone({
           </button>
         </div>
       ) : (
-        <p className="file-dropzone__recommendation">
-          {recommendationText}
-        </p>
+        <p className="file-dropzone__recommendation">{recommendationText}</p>
       )}
       {error ? (
         <p className="file-dropzone__error" id={errorId} role="alert">

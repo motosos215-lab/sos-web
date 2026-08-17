@@ -33,11 +33,7 @@ export function AccountTypeSelector({ error, name, onChange, value }: AccountTyp
   const errorId = error ? `${name}-error` : undefined;
 
   return (
-    <fieldset
-      aria-describedby={errorId}
-      aria-invalid={Boolean(error)}
-      className="account-type"
-    >
+    <fieldset aria-describedby={errorId} aria-invalid={Boolean(error)} className="account-type">
       <legend className="account-type__legend">Tipo de cuenta</legend>
       <div className="account-type__options">
         {accountTypes.map((type) => (

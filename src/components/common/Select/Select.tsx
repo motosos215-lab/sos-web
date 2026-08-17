@@ -23,13 +23,7 @@ export function Select({ className = "", error, id, label, options, placeholder,
       <label className="select-field__label" htmlFor={id}>
         {label}
       </label>
-      <select
-        {...selectProps}
-        aria-describedby={describedBy}
-        aria-invalid={Boolean(error)}
-        className="select-field__control"
-        id={id}
-      >
+      <select {...selectProps} aria-describedby={describedBy} aria-invalid={Boolean(error)} className="select-field__control" id={id}>
         {placeholder ? <option value="">{placeholder}</option> : null}
         {options.map((option) => (
           <option key={option.value} value={option.value}>

@@ -26,7 +26,7 @@ export function OtpInput({ error, id, label, length = 6, onChange, value }: OtpI
 
     if (!digit) {
       const nextDigits = [...digits];
-      nextDigits[index] = "";
+      nextDigits.fill("", index);
       onChange(nextDigits.join(""));
       return;
     }

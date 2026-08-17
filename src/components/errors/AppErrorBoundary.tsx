@@ -59,9 +59,7 @@ export class AppErrorBoundary extends Component<AppErrorBoundaryProps, AppErrorB
           </div>
           <h1>MotoSOS no pudo cargar esta pantalla</h1>
           <p>Ocurrió un error inesperado al iniciar la aplicación.</p>
-          {import.meta.env.DEV && this.state.errorName ? (
-            <small>Error detectado: {this.state.errorName}</small>
-          ) : null}
+          {import.meta.env.DEV && this.state.errorName ? <small>Error detectado: {this.state.errorName}</small> : null}
           <div className="app-error__actions">
             <button onClick={this.retry} type="button">
               Reintentar

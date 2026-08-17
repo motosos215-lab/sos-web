@@ -168,27 +168,18 @@
 }
 
 .auth-layout__topbar a,
-.auth-layout__topbar button {
+.auth-layout__topbar span {
   color: var(--color-text-muted);
   font-size: 0.92rem;
   font-weight: 700;
   text-decoration: none;
 }
 
-.auth-layout__topbar button {
-  padding: 0;
-  background: transparent;
-  border: 0;
-  cursor: pointer;
-}
-
-.auth-layout__topbar a:hover,
-.auth-layout__topbar button:hover {
+.auth-layout__topbar a:hover {
   color: var(--color-primary);
 }
 
-.auth-layout__topbar a:focus-visible,
-.auth-layout__topbar button:focus-visible {
+.auth-layout__topbar a:focus-visible {
   outline: 3px solid rgba(25, 75, 204, 0.28);
   outline-offset: 4px;
   border-radius: 6px;

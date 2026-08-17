@@ -6,14 +6,7 @@ export type SimulatedPlan = PlanId;
 export type AccountStatus = "active" | "pending" | "inactive";
 export type RegistrationStatus = "pending" | "completed";
 
-export type SetupStepKey =
-  | "perfil"
-  | "motocicleta"
-  | "contactos"
-  | "dispositivos"
-  | "plan"
-  | "confirmacion"
-  | "completed";
+export type SetupStepKey = "perfil" | "motocicleta" | "contactos" | "dispositivos" | "plan" | "confirmacion" | "completed";
 
 export interface SimulatedSession {
   userId: string;
@@ -160,17 +153,14 @@ function parseSession(value: string): SimulatedSession | null {
       planActivatedAt: typeof parsed.planActivatedAt === "string" ? parsed.planActivatedAt : new Date().toISOString(),
       vehicleRegistered: typeof parsed.vehicleRegistered === "boolean" ? parsed.vehicleRegistered : false,
       vehicleId: typeof parsed.vehicleId === "string" ? parsed.vehicleId : null,
-      emergencyContactConfigured:
-        typeof parsed.emergencyContactConfigured === "boolean" ? parsed.emergencyContactConfigured : false,
+      emergencyContactConfigured: typeof parsed.emergencyContactConfigured === "boolean" ? parsed.emergencyContactConfigured : false,
       emergencyContactId: typeof parsed.emergencyContactId === "string" ? parsed.emergencyContactId : null,
       devicesConfigured: typeof parsed.devicesConfigured === "boolean" ? parsed.devicesConfigured : false,
       mobileDeviceLinked: typeof parsed.mobileDeviceLinked === "boolean" ? parsed.mobileDeviceLinked : false,
       smartwatchLinked: typeof parsed.smartwatchLinked === "boolean" ? parsed.smartwatchLinked : false,
       mobileDeviceId: typeof parsed.mobileDeviceId === "string" ? parsed.mobileDeviceId : null,
       smartwatchDeviceId: typeof parsed.smartwatchDeviceId === "string" ? parsed.smartwatchDeviceId : null,
-      onboardingStatusSnapshot: isOnboardingStatusSnapshot(parsed.onboardingStatusSnapshot)
-        ? parsed.onboardingStatusSnapshot
-        : undefined,
+      onboardingStatusSnapshot: isOnboardingStatusSnapshot(parsed.onboardingStatusSnapshot) ? parsed.onboardingStatusSnapshot : undefined,
     };
   } catch {
     return null;

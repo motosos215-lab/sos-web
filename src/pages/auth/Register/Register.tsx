@@ -1,9 +1,6 @@
 import { FormEvent, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import {
-  AccountTypeSelector,
-  type AccountType,
-} from "../../../components/common/AccountTypeSelector/AccountTypeSelector";
+import { AccountTypeSelector, type AccountType } from "../../../components/common/AccountTypeSelector/AccountTypeSelector";
 import { AlertMessage } from "../../../components/common/AlertMessage/AlertMessage";
 import { AuthTabs } from "../../../components/common/AuthTabs/AuthTabs";
 import { Button } from "../../../components/common/Button/Button";
@@ -68,7 +65,6 @@ function mapRegisterAccountType(value: AccountType): RegisterAccountType {
 function validateRegisterForm(data: RegisterFormData): RegisterFormErrors {
   const errors: RegisterFormErrors = {};
   const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  const phonePattern = /^[0-9\s+-]+$/;
   const phoneDigits = normalizePhone(data.phone);
 
   if (data.fullName.trim().length < 3) {
@@ -81,8 +77,8 @@ function validateRegisterForm(data: RegisterFormData): RegisterFormErrors {
     errors.email = "Ingresa un correo electrónico válido.";
   }
 
-  if (!data.phone.trim() || !phonePattern.test(data.phone) || phoneDigits.length < 10 || phoneDigits.length > 15) {
-    errors.phone = "Ingresa un número de teléfono válido";
+  if (!/^\d{10}$/.test(phoneDigits) || /^0+$/.test(phoneDigits)) {
+    errors.phone = "Ingresa un teléfono de 10 dígitos sin lada";
   }
 
   if (!data.password) {
@@ -114,11 +110,9 @@ export function Register() {
   const [errors, setErrors] = useState<RegisterFormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  const [infoMessage, setInfoMessage] = useState("");
 
-  const updateField = <Field extends keyof RegisterFormData>(
-    field: Field,
-    value: RegisterFormData[Field],
-  ) => {
+  const updateField = <Field extends keyof RegisterFormData>(field: Field, value: RegisterFormData[Field]) => {
     setFormData((current) => ({ ...current, [field]: value }));
 
     if (errors[field] || errors.form) {
@@ -134,6 +128,7 @@ export function Register() {
     }
 
     setSuccessMessage("");
+    setInfoMessage("");
 
     const nextErrors = validateRegisterForm(formData);
     setErrors(nextErrors);
@@ -212,12 +207,14 @@ export function Register() {
             autoComplete="tel"
             error={errors.phone}
             id="phone"
-            inputMode="tel"
-            label="Teléfono"
+            inputMode="numeric"
+            label="Teléfono móvil"
+            maxLength={10}
             name="phone"
-            onChange={(event) => updateField("phone", event.target.value)}
-            placeholder="+57 300 000 0000"
-            type="tel"
+            onChange={(event) => updateField("phone", normalizePhone(event.target.value).slice(0, 10))}
+            pattern="[0-9]{10}"
+            placeholder="7732670267"
+            type="text"
             value={formData.phone}
           />
 
@@ -267,8 +264,21 @@ export function Register() {
               onChange={(event) => updateField("acceptedTerms", event.target.checked)}
             />
             <p className="register-form__legal-links">
-              Lee nuestros <button type="button">Términos y condiciones</button> y la{" "}
-              <button type="button">Política de privacidad</button>.
+              Lee nuestros{" "}
+              <button
+                onClick={() => setInfoMessage("Los términos estarán disponibles antes de la activación final de la cuenta.")}
+                type="button"
+              >
+                Términos y condiciones
+              </button>{" "}
+              y la{" "}
+              <button
+                onClick={() => setInfoMessage("El aviso de privacidad se muestra durante la confirmación de la configuración.")}
+                type="button"
+              >
+                Política de privacidad
+              </button>
+              .
             </p>
             {errors.acceptedTerms ? (
               <p className="register-form__field-error" id="acceptedTerms-error" role="alert">
@@ -277,16 +287,12 @@ export function Register() {
             ) : null}
           </div>
 
-          <Button
-            disabled={isSubmitting}
-            isLoading={isSubmitting}
-            loadingText="Creando cuenta..."
-            type="submit"
-          >
+          <Button disabled={isSubmitting} isLoading={isSubmitting} loadingText="Creando cuenta..." type="submit">
             Crear cuenta
           </Button>
 
           {successMessage ? <AlertMessage variant="success">{successMessage}</AlertMessage> : null}
+          {infoMessage ? <AlertMessage variant="info">{infoMessage}</AlertMessage> : null}
         </form>
 
         <p className="register-card__footer">
@@ -296,8 +302,8 @@ export function Register() {
         <aside className="register-card__info" aria-label="Información sobre el registro web">
           <h3>Todo comienza en el portal web</h3>
           <p>
-            Antes de usar la app móvil, completa tu registro aquí, configura tu perfil y agrega
-            tus contactos de emergencia. Así garantizamos tu seguridad desde el primer momento.
+            Antes de usar la app móvil, completa tu registro aquí, configura tu perfil y agrega tus contactos de emergencia. Así
+            garantizamos tu seguridad desde el primer momento.
           </p>
         </aside>
       </section>

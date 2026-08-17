@@ -6,6 +6,8 @@ import { OtpInput } from "../../../components/common/OtpInput/OtpInput";
 import { PasswordInput } from "../../../components/common/PasswordInput/PasswordInput";
 import { PasswordRequirements } from "../../../components/common/PasswordRequirements/PasswordRequirements";
 import { AuthLayout } from "../../../layouts/AuthLayout/AuthLayout";
+import { resetPassword } from "../../../services/authService";
+import { getApiErrorMessage } from "../../../utils/apiErrors";
 import "./ResetPassword.css";
 
 interface ResetPasswordLocationState {
@@ -85,10 +87,7 @@ export function ResetPassword() {
     };
   }, []);
 
-  const updateField = <Field extends keyof ResetPasswordFormData>(
-    field: Field,
-    value: ResetPasswordFormData[Field],
-  ) => {
+  const updateField = <Field extends keyof ResetPasswordFormData>(field: Field, value: ResetPasswordFormData[Field]) => {
     setFormData((current) => ({ ...current, [field]: value }));
 
     if (errors[field] || errors.form) {
@@ -120,8 +119,11 @@ export function ResetPassword() {
     setIsSubmitting(true);
 
     try {
-      await new Promise<void>((resolve) => window.setTimeout(resolve, 800));
-      setSuccessMessage("Esta opción estará disponible próximamente.");
+      await resetPassword(email, formData.code, formData.newPassword);
+      setSuccessMessage("Contraseña actualizada correctamente. Ya puedes iniciar sesión.");
+      navigationTimeoutRef.current = window.setTimeout(() => navigate("/login"), 900);
+    } catch (error) {
+      setErrors({ form: getApiErrorMessage(error) });
     } finally {
       setIsSubmitting(false);
     }
@@ -135,9 +137,7 @@ export function ResetPassword() {
           <h1 id="reset-password-title">Crear nueva contraseña</h1>
         </div>
 
-        <p className="reset-card__description">
-          Ingresa el código recibido y establece una nueva contraseña
-        </p>
+        <p className="reset-card__description">Ingresa el código recibido y establece una nueva contraseña</p>
 
         {email ? (
           <strong className="reset-card__email">Código enviado a {maskEmail(email)}</strong>
@@ -185,12 +185,7 @@ export function ResetPassword() {
             value={formData.confirmPassword}
           />
 
-          <Button
-            disabled={isSubmitting}
-            isLoading={isSubmitting}
-            loadingText="Cambiando contraseña..."
-            type="submit"
-          >
+          <Button disabled={isSubmitting} isLoading={isSubmitting} loadingText="Cambiando contraseña..." type="submit">
             Cambiar contraseña
           </Button>
         </form>

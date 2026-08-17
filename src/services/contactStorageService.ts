@@ -12,12 +12,7 @@ function resolveUserId(userId?: string): string | null {
 
 function isInvitationStatus(value: unknown): value is InvitationStatus {
   return (
-    value === "pending" ||
-    value === "invited" ||
-    value === "linked" ||
-    value === "rejected" ||
-    value === "expired" ||
-    value === "revoked"
+    value === "pending" || value === "invited" || value === "linked" || value === "rejected" || value === "expired" || value === "revoked"
   );
 }
 
@@ -145,7 +140,10 @@ export function removeStoredEmergencyContact(userIdOrContactId: string, contactI
     return;
   }
 
-  saveStoredEmergencyContacts(userId, getStoredEmergencyContacts(userId).filter((contact) => contact.id !== targetId));
+  saveStoredEmergencyContacts(
+    userId,
+    getStoredEmergencyContacts(userId).filter((contact) => contact.id !== targetId),
+  );
 }
 
 export function clearStoredEmergencyContacts(userId?: string) {

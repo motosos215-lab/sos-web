@@ -1,8 +1,6 @@
 import type { UserRole } from "../services/sessionService";
 
-export type RoleMappingResult =
-  | { ok: true; role: UserRole }
-  | { ok: false; error: string };
+export type RoleMappingResult = { ok: true; role: UserRole } | { ok: false; error: string };
 
 export function mapApiRoleToAppRole(role: string | undefined | null): RoleMappingResult {
   switch (role) {

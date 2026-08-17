@@ -8,7 +8,7 @@ import { Select, type SelectOption } from "../../../components/common/Select/Sel
 import { SetupLayout } from "../../../layouts/SetupLayout/SetupLayout";
 import { clearVehicleDraft, getVehicleDraft, saveVehicleDraft } from "../../../services/vehicleDraftService";
 import { checkVehicleAvailability, saveVehicle } from "../../../services/vehicleService";
-import { getActiveUserId, getSession, updateSession } from "../../../services/sessionService";
+import { getSession, updateSession } from "../../../services/sessionService";
 import type { VehicleFormData, VehicleMainUse, VehicleType, VehicleUseFrequency } from "../../../types/vehicle";
 import { FormErrorSummary } from "./FormErrorSummary";
 import { VehicleDocumentsSection } from "./VehicleDocumentsSection";
@@ -84,15 +84,9 @@ const frequencyOptions: SelectOption[] = [
   { label: "Ocasionalmente", value: "ocasional" },
 ];
 
-const cityOptions: SelectOption[] = [
-  "Tula de Allende",
-  "Pachuca",
-  "Ciudad de México",
-  "Querétaro",
-  "Puebla",
-  "Toluca",
-  "Otra",
-].map((value) => ({ label: value, value }));
+const cityOptions: SelectOption[] = ["Tula de Allende", "Pachuca", "Ciudad de México", "Querétaro", "Puebla", "Toluca", "Otra"].map(
+  (value) => ({ label: value, value }),
+);
 
 const fieldLabels: Partial<Record<string, string>> = {
   vehicleType: "Tipo de vehículo",
@@ -263,16 +257,30 @@ export function VehicleSetup() {
   }, []);
 
   const updateField = <Field extends keyof VehicleFormData>(field: Field, value: VehicleFormData[Field]) => {
-    setFormData((current) => ({ ...current, [field]: value }));
-    setErrors((current) => ({ ...current, [field]: undefined, form: undefined }));
+    setFormData((current) => {
+      const next = { ...current, [field]: value };
+
+      if (field === "brand" && value !== "Otra") {
+        next.customBrand = "";
+      }
+
+      if (field === "circulationCity" && value !== "Otra") {
+        next.customCirculationCity = "";
+      }
+
+      return next;
+    });
+    setErrors((current) => ({
+      ...current,
+      [field]: undefined,
+      ...(field === "brand" && value !== "Otra" ? { customBrand: undefined } : {}),
+      ...(field === "circulationCity" && value !== "Otra" ? { customCirculationCity: undefined } : {}),
+      form: undefined,
+    }));
     setSuccessMessage("");
   };
 
-  const handleFileChange = (
-    field: "vehiclePhoto" | "registrationDocument",
-    file: File | null,
-    error?: string,
-  ) => {
+  const handleFileChange = (field: "vehiclePhoto" | "registrationDocument", file: File | null, error?: string) => {
     updateField(field, file);
     setErrors((current) => ({ ...current, [field]: error, form: undefined }));
   };
@@ -362,7 +370,9 @@ export function VehicleSetup() {
           {errors.form ? <AlertMessage variant="error">{errors.form}</AlertMessage> : null}
           {infoMessage ? <AlertMessage variant="info">{infoMessage}</AlertMessage> : null}
           {hasRegisteredVehicle ? (
-            <AlertMessage variant="warning">Ya registraste el vehículo permitido por tu plan. Puedes editar el vehículo existente.</AlertMessage>
+            <AlertMessage variant="warning">
+              Ya registraste el vehículo permitido por tu plan. Puedes editar el vehículo existente.
+            </AlertMessage>
           ) : (
             <AlertMessage variant="info">Tu plan Básico permite registrar un vehículo.</AlertMessage>
           )}
@@ -440,7 +450,9 @@ export function VehicleSetup() {
                     type="text"
                     value={formData.alias}
                   />
-                  <p className="vehicle-setup__hint" id="alias-help">Este alias te ayudará a identificar tu vehículo fácilmente.</p>
+                  <p className="vehicle-setup__hint" id="alias-help">
+                    Este alias te ayudará a identificar tu vehículo fácilmente.
+                  </p>
                 </div>
               </div>
 
@@ -470,7 +482,9 @@ export function VehicleSetup() {
                     type="text"
                     value={formData.licensePlate}
                   />
-                  <p className="vehicle-setup__hint" id="licensePlate-help">Escribe la placa sin espacios innecesarios.</p>
+                  <p className="vehicle-setup__hint" id="licensePlate-help">
+                    Escribe la placa sin espacios innecesarios.
+                  </p>
                 </div>
                 <div>
                   <Input
@@ -486,13 +500,18 @@ export function VehicleSetup() {
                     type="text"
                     value={formData.vinOrSerialNumber}
                   />
-                  <p className="vehicle-setup__hint" id="vinOrSerialNumber-help">Puedes encontrarlo en el chasis o en la tarjeta de circulación.</p>
+                  <p className="vehicle-setup__hint" id="vinOrSerialNumber-help">
+                    Puedes encontrarlo en el chasis o en la tarjeta de circulación.
+                  </p>
                 </div>
               </div>
             </div>
           </FormSection>
 
-          <FormSection title="Uso del vehículo" description="Indica cómo usas normalmente este vehículo para contextualizar tus viajes monitoreados.">
+          <FormSection
+            title="Uso del vehículo"
+            description="Indica cómo usas normalmente este vehículo para contextualizar tus viajes monitoreados."
+          >
             <div className="vehicle-setup__columns">
               <div className="vehicle-setup__column">
                 <Select
@@ -561,9 +580,13 @@ export function VehicleSetup() {
           />
 
           <div className="vehicle-setup__actions">
-            <Button onClick={handleSaveDraft} type="button" variant="secondary">Guardar borrador</Button>
+            <Button onClick={handleSaveDraft} type="button" variant="secondary">
+              Guardar borrador
+            </Button>
             <div>
-              <Button onClick={handleBack} type="button" variant="secondary">Volver</Button>
+              <Button onClick={handleBack} type="button" variant="secondary">
+                Volver
+              </Button>
               <Button disabled={isSubmitting} isLoading={isSubmitting} loadingText="Guardando vehículo..." type="submit">
                 Guardar y continuar
               </Button>

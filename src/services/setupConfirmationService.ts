@@ -6,8 +6,9 @@ import type {
   SetupSummaryModule,
   SetupSummaryStatus,
 } from "../types/setupConfirmation";
-import type { EmergencyContact, InvitationStatus } from "../types/contact";
+import type { InvitationStatus } from "../types/contact";
 import type { MobileDevice, SmartwatchDevice } from "../types/device";
+import type { OnboardingSummary, OnboardingSummaryStep } from "../types/onboarding";
 import type { PlanId } from "../types/plan";
 import { formatRelativeDate } from "../utils/dateFormat";
 import { maskEmail, maskLicensePlate, maskPhone, safeDisplayValue } from "../utils/privacy";
@@ -16,6 +17,8 @@ import { getSession, updateSession, type SimulatedSession } from "./sessionServi
 import { getStoredEmergencyContacts } from "./contactStorageService";
 import { getStoredDevicesState } from "./deviceStorageService";
 import { getVehicleDraft } from "./vehicleDraftService";
+import { confirmOnboarding, getOnboardingSummary } from "./onboardingService";
+import { getApiErrorMessage } from "../utils/apiErrors";
 
 const PLAN_NAMES: Record<PlanId, string> = {
   basico: "Básico",
@@ -48,10 +51,44 @@ const CONTACT_LINK_WARNING = "Tu contacto todavía debe aceptar la invitación d
 const DOCUMENTS_WARNING = "Puedes agregar documentos posteriormente desde la configuración de tu cuenta";
 const PLAN_UPGRADE_WARNING = "Puedes mejorar tu plan posteriormente desde la aplicación móvil";
 
-function wait(milliseconds: number) {
-  return new Promise((resolve) => {
-    window.setTimeout(resolve, milliseconds);
-  });
+function getStepStatus(summary: OnboardingSummary, key: string): string | undefined {
+  return summary.steps?.find((step: OnboardingSummaryStep) => step.key?.toLowerCase() === key.toLowerCase())?.status?.toLowerCase();
+}
+
+function isStepComplete(summary: OnboardingSummary, key: string): boolean {
+  return getStepStatus(summary, key) === "completed";
+}
+
+function mapInvitationStatus(value: string | undefined): InvitationStatus | null {
+  if (!value) {
+    return null;
+  }
+
+  const normalized = value.toLowerCase();
+  if (["pending", "invited", "linked", "rejected", "expired", "revoked"].includes(normalized)) {
+    return normalized as InvitationStatus;
+  }
+
+  return null;
+}
+
+function mapPlanId(value: string | undefined): PlanId {
+  const normalized = value?.toLowerCase().replace(/[-\s]+/g, "_");
+
+  if (normalized === "plus" || normalized === "familiar_pro") {
+    return normalized;
+  }
+
+  return "basico";
+}
+
+function formatBackendVehicleType(value: string | undefined): string {
+  if (!value) {
+    return "No disponible";
+  }
+
+  const normalized = value.toLowerCase();
+  return VEHICLE_TYPE_LABELS[normalized] ?? value;
 }
 
 function createModule(
@@ -78,8 +115,7 @@ function createModule(
 }
 
 function buildCuentaModule(session: SimulatedSession): SetupSummaryModule {
-  const hasValidSession =
-    session.userId.length > 0 && session.name.length > 0 && session.email.length > 0 && session.role === "conductor";
+  const hasValidSession = session.userId.length > 0 && session.name.length > 0 && session.email.length > 0 && session.role === "conductor";
 
   const blockingMessage = hasValidSession
     ? undefined
@@ -105,13 +141,14 @@ function buildCuentaModule(session: SimulatedSession): SetupSummaryModule {
 
 function buildPerfilModule(session: SimulatedSession): SetupSummaryModule {
   const profileDraft = getDriverProfileDraft();
+  const profileCompleted = session.onboardingStatusSnapshot?.profileCompleted === true;
   const fullName = profileDraft?.fullName ?? session.name;
   const phone = profileDraft?.phone ?? "";
   const email = profileDraft?.email ?? session.email;
   const city = profileDraft?.city ?? "";
   const bloodType = profileDraft?.bloodType ?? "";
 
-  const hasBasicInfo = fullName.length > 0 && phone.length > 0 && email.length > 0;
+  const hasBasicInfo = profileCompleted || (fullName.length > 0 && phone.length > 0 && email.length > 0);
 
   return createModule(
     "perfil",
@@ -122,7 +159,7 @@ function buildPerfilModule(session: SimulatedSession): SetupSummaryModule {
     [
       { label: "Nombre", value: safeDisplayValue(fullName) },
       { label: "Correo", value: maskEmail(email) },
-      { label: "Teléfono", value: maskPhone(phone) },
+      { label: "Teléfono", value: phone ? maskPhone(phone) : profileCompleted ? "Guardado en MotoSOS" : "No disponible" },
       { label: "Ciudad", value: safeDisplayValue(city) },
       ...(bloodType ? [{ label: "Tipo de sangre", value: bloodType }] : []),
     ],
@@ -158,20 +195,15 @@ function buildVehiculoModule(session: SimulatedSession): SetupSummaryModule {
   );
 }
 
-function isAcceptedInvitationStatus(status: InvitationStatus): boolean {
-  return status === "invited" || status === "linked";
-}
-
 function buildContactoModule(session: SimulatedSession): SetupSummaryModule {
   const contacts = getStoredEmergencyContacts();
-  const primaryContact =
-    contacts.find((contact) => contact.id === session.emergencyContactId) ?? contacts[0] ?? null;
+  const primaryContact = contacts.find((contact) => contact.id === session.emergencyContactId) ?? contacts[0] ?? null;
 
   const configured = session.emergencyContactConfigured && Boolean(session.emergencyContactId);
   const status: InvitationStatus | null = primaryContact?.invitationStatus ?? null;
   const contactPhone = primaryContact?.phone ?? "";
 
-  let moduleStatus: SetupSummaryStatus = "incomplete";
+  let moduleStatus: SetupSummaryStatus;
   let blockingMessage: string | undefined;
   let warningMessage: string | undefined;
 
@@ -199,7 +231,10 @@ function buildContactoModule(session: SimulatedSession): SetupSummaryModule {
     [
       { label: "Nombre", value: safeDisplayValue(primaryContact?.fullName) },
       { label: "Parentesco", value: safeDisplayValue(primaryContact?.relationship) },
-      { label: "Prioridad", value: primaryContact ? (primaryContact.priority === "principal" ? "Principal" : "Secundario") : "No disponible" },
+      {
+        label: "Prioridad",
+        value: primaryContact ? (primaryContact.priority === "principal" ? "Principal" : "Secundario") : "No disponible",
+      },
       { label: "Teléfono", value: contactPhone ? maskPhone(contactPhone) : "No disponible" },
       { label: "Estado de invitación", value: status ? INVITATION_LABELS[status] : "No configurado" },
       {
@@ -361,10 +396,120 @@ function buildModules(session: SimulatedSession | null): SetupSummaryModule[] {
   ];
 }
 
-export function getSetupSummary(): SetupCompletionValidation {
-  const session = getSession();
-  const modules = buildModules(session);
+function buildModulesFromBackend(summary: OnboardingSummary): SetupSummaryModule[] {
+  const accountComplete = Boolean(summary.user?.id && summary.user.fullName && summary.user.email);
+  const profileComplete = isStepComplete(summary, "Profile");
+  const vehicleComplete = isStepComplete(summary, "Vehicle");
+  const contactComplete = isStepComplete(summary, "EmergencyContacts");
+  const devicesComplete = isStepComplete(summary, "Devices");
+  const planComplete = isStepComplete(summary, "Plan");
+  const contactStatus = mapInvitationStatus(summary.emergencyContact?.invitationStatus);
+  const plan = mapPlanId(summary.subscription?.planTier);
+  const planActive = summary.subscription?.status?.toLowerCase() === "active";
 
+  const modules: SetupSummaryModule[] = [
+    createModule(
+      "cuenta",
+      "Cuenta",
+      "Tu cuenta MotoSOS verificada",
+      "",
+      accountComplete ? "complete" : "incomplete",
+      [
+        { label: "Nombre", value: safeDisplayValue(summary.user?.fullName) },
+        { label: "Correo", value: maskEmail(summary.user?.email ?? "") },
+        { label: "Rol", value: "Conductor" },
+        { label: "Estado", value: "Cuenta verificada" },
+      ],
+      accountComplete ? undefined : "Faltan datos de tu cuenta. Verifica tu sesión e inicia sesión de nuevo",
+    ),
+    createModule(
+      "perfil",
+      "Perfil",
+      "Información personal básica",
+      "/configuracion/perfil",
+      profileComplete ? "complete" : "incomplete",
+      [
+        { label: "Nombre", value: safeDisplayValue(summary.profile?.fullName ?? summary.user?.fullName) },
+        { label: "Correo", value: maskEmail(summary.user?.email ?? "") },
+        { label: "Teléfono", value: summary.profile?.phoneNumber ? maskPhone(summary.profile.phoneNumber) : "No disponible" },
+        { label: "Ciudad", value: safeDisplayValue(summary.profile?.primaryCity) },
+      ],
+      profileComplete ? undefined : "Completa la información básica de tu perfil",
+    ),
+    createModule(
+      "motocicleta",
+      "Motocicleta / Motoneta",
+      "Vehículo registrado para tus viajes",
+      "/configuracion/motocicleta",
+      vehicleComplete ? "complete" : "incomplete",
+      [
+        { label: "Alias", value: safeDisplayValue(summary.vehicle?.alias) },
+        { label: "Tipo", value: formatBackendVehicleType(summary.vehicle?.vehicleType) },
+        { label: "Marca", value: safeDisplayValue(summary.vehicle?.brand) },
+        { label: "Modelo", value: safeDisplayValue(summary.vehicle?.model) },
+        { label: "Año", value: summary.vehicle?.year ? String(summary.vehicle.year) : "No disponible" },
+      ],
+      vehicleComplete ? undefined : "Registra tu vehículo para continuar",
+    ),
+    createModule(
+      "contactos",
+      "Contacto de emergencia",
+      "Persona que recibirá tus alertas",
+      "/configuracion/contactos",
+      contactComplete ? (contactStatus === "invited" ? "warning" : "complete") : "incomplete",
+      [
+        { label: "Nombre", value: safeDisplayValue(summary.emergencyContact?.fullName) },
+        { label: "Parentesco", value: safeDisplayValue(summary.emergencyContact?.relationship) },
+        { label: "Prioridad", value: summary.emergencyContact ? "Principal" : "No disponible" },
+        {
+          label: "Teléfono",
+          value: summary.emergencyContact?.phoneNumber ? maskPhone(summary.emergencyContact.phoneNumber) : "No disponible",
+        },
+        { label: "Estado de invitación", value: contactStatus ? INVITATION_LABELS[contactStatus] : "No configurado" },
+        { label: "Alertas críticas activas", value: summary.emergencyContact ? "Sí" : "No disponible" },
+      ],
+      contactComplete ? undefined : "Agrega un contacto de emergencia y envía la invitación",
+      contactStatus === "invited" ? CONTACT_LINK_WARNING : undefined,
+    ),
+    createModule(
+      "dispositivos",
+      "Dispositivos",
+      "Dispositivos vinculados a tu cuenta",
+      "/configuracion/dispositivos",
+      devicesComplete ? (summary.smartwatch ? "complete" : "warning") : "incomplete",
+      [
+        { label: "App móvil", value: safeDisplayValue(summary.mobileDevice?.deviceName ?? "App MotoSOS") },
+        { label: "Sistema operativo", value: safeDisplayValue(summary.mobileDevice?.platform) },
+        { label: "Estado", value: devicesComplete ? "Vinculado" : "No vinculado" },
+        { label: "Última sincronización", value: "Sin información" },
+        { label: "Smartwatch", value: summary.smartwatch ? safeDisplayValue(summary.smartwatch.deviceName) : "No vinculado" },
+      ],
+      devicesComplete ? undefined : "Vincula la aplicación móvil para continuar",
+      devicesComplete && !summary.smartwatch ? SMARTWATCH_WARNING : undefined,
+    ),
+    createModule(
+      "plan",
+      "Plan actual",
+      "Tu plan y licencia MotoSOS",
+      "/configuracion/plan",
+      planComplete && planActive ? (plan === "basico" ? "warning" : "complete") : "incomplete",
+      [
+        { label: "Nombre del plan", value: PLAN_NAMES[plan] },
+        { label: "Estado", value: planActive ? "Activo" : "No activo" },
+        { label: "Tipo de licencia", value: LICENSE_LABELS.individual },
+        { label: "Límite de contactos", value: plan === "basico" ? "1" : "Sin límite" },
+        { label: "Límite de vehículos", value: plan === "basico" ? "1" : "Sin límite" },
+        { label: "Funciones esenciales activas", value: planComplete && planActive ? "Sí" : "No" },
+      ],
+      planComplete && planActive ? undefined : "Confirma un plan activo para continuar",
+      plan === "basico" ? PLAN_UPGRADE_WARNING : undefined,
+    ),
+  ];
+
+  return modules;
+}
+
+function createValidationFromModules(modules: SetupSummaryModule[]): SetupCompletionValidation {
   const blockingIssues = modules
     .filter((module) => module.status === "incomplete")
     .map((module) => module.blockingMessage ?? `Completa el módulo ${module.title}`)
@@ -384,14 +529,32 @@ export function getSetupSummary(): SetupCompletionValidation {
   };
 }
 
+export function getSetupSummary(): SetupCompletionValidation {
+  const session = getSession();
+  const modules = buildModules(session);
+
+  return createValidationFromModules(modules);
+}
+
+export async function getLiveSetupSummary(): Promise<SetupCompletionValidation> {
+  const summary = await getOnboardingSummary();
+  return createValidationFromModules(buildModulesFromBackend(summary));
+}
+
+export async function getSetupSummaryWithFallback(): Promise<SetupCompletionValidation> {
+  try {
+    return await getLiveSetupSummary();
+  } catch {
+    return getSetupSummary();
+  }
+}
+
 export function validateSetupCompletion(): SetupCompletionValidation {
   return getSetupSummary();
 }
 
 export async function completeInitialSetup(): Promise<CompleteSetupResponse> {
-  await wait(900);
-
-  const validation = getSetupSummary();
+  const validation = await getSetupSummaryWithFallback();
 
   if (!validation.isValid) {
     return {
@@ -411,23 +574,28 @@ export async function completeInitialSetup(): Promise<CompleteSetupResponse> {
     };
   }
 
-  const completedAt = new Date().toISOString();
+  try {
+    const result = await confirmOnboarding();
+    const completedAt = result.completedAtUtc ?? new Date().toISOString();
 
-  updateSession({
-    setupCompleted: true,
-    currentSetupStep: "completed",
-    registrationStatus: "completed",
-    setupCompletedAt: completedAt,
-    accountStatus: "active",
-  });
-
-  return {
-    success: true,
-    message: "Tu cuenta MotoSOS ha sido activada correctamente",
-    data: {
+    updateSession({
       setupCompleted: true,
-      completedAt,
-      nextRoute: "/dashboard/resumen",
-    },
-  };
+      currentSetupStep: "completed",
+      registrationStatus: "completed",
+      setupCompletedAt: completedAt,
+      accountStatus: "active",
+    });
+
+    return {
+      success: true,
+      message: "Tu cuenta MotoSOS ha sido activada correctamente",
+      data: {
+        setupCompleted: true,
+        completedAt,
+        nextRoute: "/dashboard/resumen",
+      },
+    };
+  } catch (error) {
+    return { success: false, message: getApiErrorMessage(error), data: null };
+  }
 }

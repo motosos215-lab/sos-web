@@ -10,29 +10,57 @@ interface ConfirmActionModalProps {
   title: string;
 }
 
-export function ConfirmActionModal({
-  confirmLabel,
-  isProcessing,
-  message,
-  onCancel,
-  onConfirm,
-  title,
-}: ConfirmActionModalProps) {
+export function ConfirmActionModal({ confirmLabel, isProcessing, message, onCancel, onConfirm, title }: ConfirmActionModalProps) {
   const dialogRef = useRef<HTMLDivElement | null>(null);
+  const onCancelRef = useRef(onCancel);
 
   useEffect(() => {
-    const cancelButton = dialogRef.current?.querySelector<HTMLButtonElement>("button");
+    onCancelRef.current = onCancel;
+  }, [onCancel]);
+
+  useEffect(() => {
+    const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const dialog = dialogRef.current;
+    const cancelButton = dialog?.querySelector<HTMLButtonElement>("button");
     cancelButton?.focus();
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        onCancel();
+        onCancelRef.current();
+        return;
+      }
+
+      if (event.key !== "Tab" || !dialog) {
+        return;
+      }
+
+      const focusableElements = Array.from(dialog.querySelectorAll<HTMLElement>("button, [tabindex]:not([tabindex='-1'])")).filter(
+        (element) => !element.hasAttribute("disabled"),
+      );
+
+      if (focusableElements.length === 0) {
+        event.preventDefault();
+        return;
+      }
+
+      const firstElement = focusableElements[0];
+      const lastElement = focusableElements[focusableElements.length - 1];
+
+      if (event.shiftKey && document.activeElement === firstElement) {
+        event.preventDefault();
+        lastElement.focus();
+      } else if (!event.shiftKey && document.activeElement === lastElement) {
+        event.preventDefault();
+        firstElement.focus();
       }
     };
 
     document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [onCancel]);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      previous?.focus({ preventScroll: true });
+    };
+  }, []);
 
   return (
     <div className="contact-modal" role="presentation">

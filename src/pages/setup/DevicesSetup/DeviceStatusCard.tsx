@@ -14,14 +14,7 @@ interface DeviceStatusCardProps {
   title: string;
 }
 
-export function DeviceStatusCard({
-  device,
-  isRefreshing,
-  onRefresh,
-  onRevoke,
-  reportedByMobileApp = false,
-  title,
-}: DeviceStatusCardProps) {
+export function DeviceStatusCard({ device, isRefreshing, onRefresh, onRevoke, reportedByMobileApp = false, title }: DeviceStatusCardProps) {
   const isRevoked = device.status === "revoked";
 
   return (
@@ -53,11 +46,15 @@ export function DeviceStatusCard({
         </div>
         <div>
           <dt>Batería</dt>
-          <dd><BatteryIndicator level={device.batteryLevel} /></dd>
+          <dd>
+            <BatteryIndicator level={device.batteryLevel} />
+          </dd>
         </div>
         <div>
           <dt>Conexión</dt>
-          <dd><ConnectionIndicator quality={device.connectionQuality} /></dd>
+          <dd>
+            <ConnectionIndicator quality={device.connectionQuality} />
+          </dd>
         </div>
         <div>
           <dt>Última sincronización</dt>

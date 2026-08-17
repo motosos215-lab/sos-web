@@ -1,10 +1,5 @@
 import type { ApiResponse } from "../types/auth";
-import type {
-  ConfirmOnboardingResult,
-  OnboardingStatus,
-  OnboardingSummary,
-  OnboardingSummaryModule,
-} from "../types/onboarding";
+import type { ConfirmOnboardingResult, OnboardingStatus, OnboardingSummary, OnboardingSummaryModule } from "../types/onboarding";
 import { ApiRequestError, api, unwrap } from "./api";
 import type { SetupStepKey, SimulatedSession } from "./sessionService";
 
@@ -46,12 +41,27 @@ function readString(source: Record<string, unknown>, keys: string[]): string | u
   return undefined;
 }
 
+function readNumber(source: Record<string, unknown>, keys: string[]): number | undefined {
+  for (const key of keys) {
+    const value = source[key];
+
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return value;
+    }
+  }
+
+  return undefined;
+}
+
 function normalizeStep(value: string | undefined): SetupStepKey | undefined {
   if (!value) {
     return undefined;
   }
 
-  const normalized = value.trim().toLowerCase().replace(/[\s_-]+/g, "");
+  const normalized = value
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_-]+/g, "");
 
   switch (normalized) {
     case "profile":
@@ -100,6 +110,19 @@ function normalizeModules(value: unknown): OnboardingSummaryModule[] | undefined
   }));
 }
 
+function normalizeSteps(value: unknown) {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+
+  return value.filter(isRecord).map((step) => ({
+    key: readString(step, ["key"]),
+    order: readNumber(step, ["order"]),
+    label: readString(step, ["label", "title"]),
+    status: readString(step, ["status"]),
+  }));
+}
+
 function readStringArray(value: unknown): string[] | undefined {
   if (!Array.isArray(value)) {
     return undefined;
@@ -134,25 +157,113 @@ function normalizeOnboardingSummary(value: unknown): OnboardingSummary {
     throw new ApiRequestError("invalid_response", "Recibimos una respuesta inesperada del servicio", null);
   }
 
+  const source = isRecord(value.summary) ? value.summary : value;
+
   return {
-    isCompleted: readBoolean(value, ["isCompleted", "completed", "setupCompleted", "onboardingCompleted"]),
-    isValid: readBoolean(value, ["isValid", "valid"]),
-    currentStep: normalizeStep(readString(value, ["currentStep", "step", "nextStep"])),
-    modules: normalizeModules(value.modules),
-    blockingIssues: readStringArray(value.blockingIssues),
-    warnings: readStringArray(value.warnings),
+    isCompleted: readBoolean(source, ["isCompleted", "completed", "setupCompleted", "onboardingCompleted"]),
+    isValid: readBoolean(source, ["isValid", "valid"]),
+    canConfirm: readBoolean(source, ["canConfirm"]),
+    isConfirmed: readBoolean(source, ["isConfirmed", "confirmed"]),
+    isOperational: readBoolean(source, ["isOperational", "operational"]),
+    completedSteps: readNumber(source, ["completedSteps"]),
+    progressPercentage: readNumber(source, ["progressPercentage"]),
+    currentStep: normalizeStep(readString(source, ["currentStep", "step", "nextStep"])),
+    modules: normalizeModules(source.modules),
+    blockingIssues: readStringArray(source.blockingIssues),
+    warnings: readStringArray(source.warnings),
+    user: isRecord(source.user)
+      ? {
+          id: readString(source.user, ["id"]),
+          fullName: readString(source.user, ["fullName", "name"]),
+          email: readString(source.user, ["email"]),
+          phoneNumber: readString(source.user, ["phoneNumber", "phone"]),
+          role: readString(source.user, ["role"]),
+        }
+      : undefined,
+    profile: isRecord(source.profile)
+      ? {
+          fullName: readString(source.profile, ["fullName", "name"]),
+          phoneNumber: readString(source.profile, ["phoneNumber", "phone"]),
+          primaryCity: readString(source.profile, ["primaryCity", "city"]),
+          addressOrZone: readString(source.profile, ["addressOrZone", "address"]),
+        }
+      : undefined,
+    vehicle: isRecord(source.vehicle)
+      ? {
+          id: readString(source.vehicle, ["id"]),
+          vehicleType: readString(source.vehicle, ["vehicleType", "type"]),
+          brand: readString(source.vehicle, ["brand"]),
+          model: readString(source.vehicle, ["model"]),
+          year: readNumber(source.vehicle, ["year"]),
+          alias: readString(source.vehicle, ["alias"]),
+        }
+      : undefined,
+    emergencyContact: isRecord(source.emergencyContact)
+      ? {
+          id: readString(source.emergencyContact, ["id"]),
+          fullName: readString(source.emergencyContact, ["fullName", "name"]),
+          phoneNumber: readString(source.emergencyContact, ["phoneNumber", "phone"]),
+          relationship: readString(source.emergencyContact, ["relationship"]),
+          invitationStatus: readString(source.emergencyContact, ["invitationStatus", "status"]),
+        }
+      : undefined,
+    mobileDevice: normalizeDevice(source.mobileDevice),
+    smartwatch: normalizeDevice(source.smartwatch),
+    subscription: isRecord(source.subscription)
+      ? {
+          id: readString(source.subscription, ["id"]),
+          planTier: readString(source.subscription, ["planTier", "plan"]),
+          status: readString(source.subscription, ["status"]),
+          source: readString(source.subscription, ["source"]),
+        }
+      : undefined,
+    steps: normalizeSteps(source.steps),
+  };
+}
+
+function normalizeDevice(value: unknown) {
+  if (!isRecord(value)) {
+    return undefined;
+  }
+
+  return {
+    id: readString(value, ["id"]),
+    deviceType: readString(value, ["deviceType", "type"]),
+    deviceName: readString(value, ["deviceName", "name"]),
+    platform: readString(value, ["platform"]),
+    linkStatus: readString(value, ["linkStatus"]),
+    connectionStatus: readString(value, ["connectionStatus"]),
+    batteryLevel: readNumber(value, ["batteryLevel"]),
   };
 }
 
 function normalizeConfirmResult(value: unknown): ConfirmOnboardingResult {
   if (!isRecord(value)) {
-    return {};
+    throw new ApiRequestError("invalid_response", "No pudimos confirmar que la cuenta quedara activada", null);
   }
 
-  return {
-    isCompleted: readBoolean(value, ["isCompleted", "completed", "setupCompleted", "onboardingCompleted"]),
-    completedAtUtc: readString(value, ["completedAtUtc", "completedAt"]),
+  const source = isRecord(value.onboarding) ? value.onboarding : value;
+  const currentStep = normalizeStep(readString(source, ["currentStep", "step", "nextStep"]));
+
+  const result = {
+    isCompleted:
+      readBoolean(source, [
+        "isCompleted",
+        "completed",
+        "setupCompleted",
+        "onboardingCompleted",
+        "isConfirmed",
+        "confirmed",
+        "isOperational",
+      ]) ?? (currentStep === "completed" ? true : undefined),
+    completedAtUtc: readString(source, ["completedAtUtc", "completedAt"]),
   };
+
+  if (result.isCompleted !== true && !result.completedAtUtc) {
+    throw new ApiRequestError("invalid_response", "No pudimos confirmar que la cuenta quedara activada", null);
+  }
+
+  return result;
 }
 
 export async function getOnboardingStatus(): Promise<OnboardingStatus> {

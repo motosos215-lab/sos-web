@@ -29,8 +29,9 @@ export function RevokeDeviceModal({ device, isProcessing, onCancel, onConfirm }:
         return;
       }
 
-      const focusableElements = Array.from(dialog.querySelectorAll<HTMLElement>("button, [tabindex]:not([tabindex='-1'])"))
-        .filter((element) => !element.hasAttribute("disabled"));
+      const focusableElements = Array.from(dialog.querySelectorAll<HTMLElement>("button, [tabindex]:not([tabindex='-1'])")).filter(
+        (element) => !element.hasAttribute("disabled"),
+      );
 
       if (focusableElements.length === 0) {
         return;
@@ -55,9 +56,10 @@ export function RevokeDeviceModal({ device, isProcessing, onCancel, onConfirm }:
     };
   }, [onCancel]);
 
-  const message = device.type === "mobile_app"
-    ? "Al revocar la app móvil, deberás generar un nuevo código para volver a vincularla."
-    : "El smartwatch dejará de aparecer como dispositivo activo en la web.";
+  const message =
+    device.type === "mobile_app"
+      ? "Al revocar la app móvil, deberás generar un nuevo código para volver a vincularla."
+      : "El smartwatch dejará de aparecer como dispositivo activo en la web.";
 
   return (
     <div className="device-modal" role="presentation">

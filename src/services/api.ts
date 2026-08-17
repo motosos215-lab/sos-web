@@ -6,13 +6,9 @@ import axios, {
   type AxiosResponse,
   type InternalAxiosRequestConfig,
 } from "axios";
-import { apiConfig, hasApiBaseUrl } from "../config/apiConfig";
+import { apiConfig } from "../config/apiConfig";
 import type { ApiResponse, RefreshTokens } from "../types/auth";
-import {
-  clearAuthTokens,
-  getAuthTokens,
-  saveAuthTokens,
-} from "./authTokenService";
+import { clearAuthTokens, getAuthTokens, saveAuthTokens } from "./authTokenService";
 import { clearSession, getActiveUserId } from "./sessionService";
 import { isAccessTokenUsable } from "../utils/tokenExpiry";
 
@@ -24,6 +20,7 @@ const PUBLIC_ENDPOINTS = [
   "/api/v1/auth/login",
   "/api/v1/auth/register",
   "/api/v1/auth/forgot-password",
+  "/api/v1/auth/reset-password",
   "/api/v1/auth/request-access-code",
   "/api/v1/auth/login-with-code",
   "/api/v1/auth/refresh",
@@ -61,7 +58,7 @@ function isPublicPath(url: string | undefined): boolean {
   return PUBLIC_ENDPOINTS.includes(normalized);
 }
 
-interface EnvelopeBody<T> {
+interface EnvelopeBody {
   success?: unknown;
   data?: unknown;
   error?: { code?: unknown; message?: unknown } | null;
@@ -69,13 +66,12 @@ interface EnvelopeBody<T> {
 
 function throwFromEnvelope(status: number | null, code: string | undefined, message: string | undefined) {
   const errorCode = code ?? (status != null ? `http_${status}` : "network");
-  const fallback =
-    status != null ? "El servicio de MotoSOS no está disponible temporalmente" : "No fue posible conectar con MotoSOS";
+  const fallback = status != null ? "El servicio de MotoSOS no está disponible temporalmente" : "No fue posible conectar con MotoSOS";
   throw new ApiRequestError(errorCode, message?.length ? message : fallback, status);
 }
 
 export function unwrap<T>(response: AxiosResponse<ApiResponse<T> | null>): T {
-  const body = response.data as EnvelopeBody<T> | null;
+  const body = response.data as EnvelopeBody | null;
 
   if (body && typeof body === "object" && "success" in body) {
     if (body.success) {
@@ -125,9 +121,7 @@ function isWrappedAuthError(error: AxiosError): boolean {
     const code = typeof body.error?.code === "string" ? body.error.code : "";
 
     return (
-      code.toLowerCase().includes("unauthorized") ||
-      code.toLowerCase().includes("token-expired") ||
-      code.toLowerCase() === "invalid_token"
+      code.toLowerCase().includes("unauthorized") || code.toLowerCase().includes("token-expired") || code.toLowerCase() === "invalid_token"
     );
   }
 
@@ -143,9 +137,7 @@ function readOptionalString(value: unknown): string | undefined {
 }
 
 function extractRefreshTokens(body: ApiResponse<RefreshTokens> | null): RefreshTokens | null {
-  const candidate = body?.data as
-    | (Partial<RefreshTokens> & { tokens?: Record<string, unknown> })
-    | undefined;
+  const candidate = body?.data as (Partial<RefreshTokens> & { tokens?: Record<string, unknown> }) | undefined;
 
   if (!candidate) {
     return null;

@@ -20,11 +20,13 @@ function getInitials(name: string) {
   return name.trim().charAt(0).toUpperCase() || "U";
 }
 
-function SetupSidebar({ onLogout, steps }: { onLogout: () => void; steps: SetupStep[] }) {
+function SetupSidebar({ onLogout, onNavigate, steps }: { onLogout: () => void; onNavigate: () => void; steps: SetupStep[] }) {
   return (
     <aside className="setup-sidebar" aria-label="Configuración inicial">
       <div className="setup-sidebar__brand">
-        <div className="setup-sidebar__logo" aria-hidden="true">MS</div>
+        <div className="setup-sidebar__logo" aria-hidden="true">
+          MS
+        </div>
         <div>
           <p>MotoSOS</p>
           <span>Sistema de emergencia para motociclistas</span>
@@ -37,6 +39,7 @@ function SetupSidebar({ onLogout, steps }: { onLogout: () => void; steps: SetupS
             aria-current={step.status === "current" ? "step" : undefined}
             className={`setup-sidebar__step setup-sidebar__step--${step.status}`}
             key={step.key}
+            onClick={onNavigate}
             to={step.path}
           >
             <span className="setup-sidebar__step-marker" aria-hidden="true">
@@ -44,9 +47,7 @@ function SetupSidebar({ onLogout, steps }: { onLogout: () => void; steps: SetupS
             </span>
             <span>
               <strong>{step.label}</strong>
-              <small>
-                {step.status === "completed" ? "Completado" : step.status === "current" ? "En progreso" : "Pendiente"}
-              </small>
+              <small>{step.status === "completed" ? "Completado" : step.status === "current" ? "En progreso" : "Pendiente"}</small>
             </span>
           </Link>
         ))}
@@ -66,8 +67,10 @@ function SetupTopbar({ name, onMenuClick }: { name: string; onMenuClick: () => v
         Menú
       </button>
       <div className="setup-topbar__links">
-        <a href="mailto:soporte@motosos.local">Soporte y ayuda</a>
-        <button aria-label="Idioma actual: Español" type="button">Español</button>
+        <a href="mailto:soporte@motosos.com">Soporte y ayuda</a>
+        <span aria-label="Idioma actual: Español" role="status">
+          Español
+        </span>
       </div>
       <div className="setup-topbar__user" aria-label={`Usuario actual: ${name}`}>
         <span aria-hidden="true">{getInitials(name)}</span>
@@ -77,13 +80,13 @@ function SetupTopbar({ name, onMenuClick }: { name: string; onMenuClick: () => v
   );
 }
 
-function SetupStepper({ steps }: { steps: SetupStep[] }) {
+function SetupStepper({ activeStep, steps }: { activeStep: SetupNavigationKey; steps: SetupStep[] }) {
   const stepperRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     const currentItem = stepperRef.current?.querySelector<HTMLLIElement>(".setup-stepper__item--current");
     currentItem?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
-  }, [steps]);
+  }, [activeStep]);
 
   return (
     <nav className="setup-stepper" ref={stepperRef} aria-label="Progreso horizontal de configuración">
@@ -136,7 +139,9 @@ function SetupProgressPanel({ steps }: { steps: SetupStep[] }) {
         <div className="setup-progress__circle" aria-label={`${percentage}% completado`}>
           {percentage}%
         </div>
-        <p>{completedCount} de {steps.length} pasos completados</p>
+        <p>
+          {completedCount} de {steps.length} pasos completados
+        </p>
       </section>
 
       <section className="setup-progress__card">
@@ -197,7 +202,7 @@ function SetupProgressPanel({ steps }: { steps: SetupStep[] }) {
 
       <section className="setup-progress__card">
         <h2>¿Necesitas ayuda?</h2>
-        <button type="button">Ir a Soporte y ayuda</button>
+        <a href="mailto:soporte@motosos.com">Ir a Soporte y ayuda</a>
       </section>
     </aside>
   );
@@ -215,6 +220,21 @@ export function SetupLayout({ activeStep, children, progressPanel, rightPanelPla
     performLogout();
   };
 
+  useEffect(() => {
+    if (!isMenuOpen) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isMenuOpen]);
+
   const panel = progressPanel ?? <SetupProgressPanel steps={steps} />;
   const isResponsivePanel = rightPanelPlacement === "responsive";
   const isHiddenPanel = rightPanelPlacement === "hidden";
@@ -230,19 +250,27 @@ export function SetupLayout({ activeStep, children, progressPanel, rightPanelPla
   return (
     <main className="setup-layout">
       <div className={`setup-layout__sidebar ${isMenuOpen ? "setup-layout__sidebar--open" : ""}`.trim()}>
-        <SetupSidebar onLogout={handleLogout} steps={steps} />
+        <SetupSidebar onLogout={handleLogout} onNavigate={() => setIsMenuOpen(false)} steps={steps} />
       </div>
+      {isMenuOpen ? (
+        <button
+          aria-label="Cerrar menú de configuración"
+          className="setup-layout__backdrop"
+          onClick={() => setIsMenuOpen(false)}
+          type="button"
+        />
+      ) : null}
 
       <div className="setup-layout__main">
         <SetupTopbar name={userName} onMenuClick={() => setIsMenuOpen((current) => !current)} />
         <div className={contentShellClass}>
           <section className="setup-layout__content">
-            <SetupStepper steps={steps} />
+            <SetupStepper activeStep={activeStep} steps={steps} />
             {children}
           </section>
           {isResponsivePanel ? <div className="setup-layout__panel setup-layout__panel--below">{panel}</div> : isHiddenPanel ? null : panel}
         </div>
-        <footer className="setup-layout__footer">MotoSOS configuración inicial. Datos simulados para desarrollo.</footer>
+        <footer className="setup-layout__footer">MotoSOS configuración inicial. Tus datos se sincronizan de forma segura.</footer>
       </div>
     </main>
   );
