@@ -102,7 +102,7 @@ export function ForgotPassword() {
 
         <div className="forgot-card__links">
           <Link to="/login">Iniciar sesión</Link>
-          <Link to="/registro">Crear cuenta</Link>
+          <Link to="/register">Crear cuenta</Link>
         </div>
       </section>
     </AuthLayout>

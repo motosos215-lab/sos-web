@@ -182,7 +182,7 @@ export function VerifyAccount() {
         </div>
 
         <div className="verify-card__links">
-          {!email ? <Link to="/registro">Volver al registro</Link> : null}
+          {!email ? <Link to="/register">Volver al registro</Link> : null}
           <Link to="/login">Volver al inicio de sesión</Link>
         </div>
       </section>

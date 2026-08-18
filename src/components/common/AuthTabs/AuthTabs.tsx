@@ -7,7 +7,7 @@ export function AuthTabs() {
       <NavLink className="auth-tabs__item" to="/login">
         Iniciar sesión
       </NavLink>
-      <NavLink className="auth-tabs__item" to="/registro">
+      <NavLink className="auth-tabs__item" to="/register">
         Crear cuenta
       </NavLink>
     </nav>

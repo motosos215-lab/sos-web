@@ -26,6 +26,7 @@ interface LoginFormErrors {
 
 interface LoginLocationState {
   message?: string;
+  redirectTo?: string;
 }
 
 const initialValues: LoginFormValues = {
@@ -51,6 +52,14 @@ function validateLogin(values: LoginFormValues): LoginFormErrors {
   }
 
   return errors;
+}
+
+function getSafeRedirectPath(value: unknown): string | null {
+  if (typeof value !== "string" || !value.startsWith("/") || value.startsWith("//")) {
+    return null;
+  }
+
+  return value;
 }
 
 export function Login() {
@@ -94,6 +103,13 @@ export function Login() {
       });
 
       setSuccessMessage("Inicio de sesión correcto");
+
+      const redirectTo = getSafeRedirectPath(state?.redirectTo);
+
+      if (redirectTo) {
+        navigate(redirectTo, { replace: true });
+        return;
+      }
 
       if (session.role === "conductor" && !session.setupCompleted) {
         navigate(resolveOnboardingRoute(session.onboardingStatusSnapshot ?? {}, session));
@@ -195,7 +211,7 @@ export function Login() {
               name="remember"
               onChange={(event) => setValues((current) => ({ ...current, remember: event.target.checked }))}
             />
-            <Link className="login-form__link" to="/recuperar-contrasena">
+            <Link className="login-form__link" to="/forgot-password">
               ¿Olvidaste tu contraseña?
             </Link>
           </div>
@@ -224,7 +240,7 @@ export function Login() {
         <p className="login-card__note">Si eres conductor, monitor o administrador, accede con tu cuenta MotoSOS.</p>
 
         <p className="login-card__footer">
-          ¿No tienes cuenta? <Link to="/registro">Crear cuenta</Link>
+          ¿No tienes cuenta? <Link to="/register">Crear cuenta</Link>
         </p>
       </section>
     </AuthLayout>

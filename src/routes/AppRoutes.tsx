@@ -56,9 +56,12 @@ export function AppRoutes() {
       <Routes>
         <Route path="/" element={<RootRedirect />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
         <Route path="/registro" element={<Register />} />
         <Route path="/verificar-cuenta" element={<VerifyAccount />} />
+        <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/recuperar-contrasena" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/restablecer-contrasena" element={<ResetPassword />} />
         <Route element={<ProtectedRoute />}>
           <Route element={<DashboardRoute />}>
@@ -84,6 +87,7 @@ export function AppRoutes() {
             <Route path="/configuracion/perfil" element={<ProfileSetup />} />
             <Route path="/configuracion/motocicleta" element={<VehicleSetup />} />
             <Route path="/configuracion/contactos" element={<ContactSetup />} />
+            <Route path="/emergency-contacts/:contactId/edit" element={<ContactSetup />} />
             <Route path="/configuracion/dispositivos" element={<DevicesSetup />} />
             <Route path="/configuracion/plan" element={<PlanSetup />} />
             <Route path="/configuracion/confirmacion" element={<ConfirmationSetup />} />

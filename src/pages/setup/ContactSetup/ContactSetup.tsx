@@ -1,5 +1,5 @@
-import { FormEvent, useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { FormEvent, useEffect, useRef, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { AlertMessage } from "../../../components/common/AlertMessage/AlertMessage";
 import { Button } from "../../../components/common/Button/Button";
 import { SetupLayout } from "../../../layouts/SetupLayout/SetupLayout";
@@ -207,7 +207,9 @@ function updateExpiredInvitations(contacts: EmergencyContact[]) {
 
 export function ContactSetup() {
   const navigate = useNavigate();
+  const { contactId } = useParams<{ contactId?: string }>();
   const session = getSession();
+  const missingEditContactIdRef = useRef<string | null>(null);
   const contactLimit = session?.contactLimit ?? 1;
   const [contacts, setContacts] = useState<EmergencyContact[]>(() => updateExpiredInvitations(getStoredEmergencyContacts()).contacts);
   const [formData, setFormData] = useState<EmergencyContactDraft>(initialFormData);
@@ -278,6 +280,9 @@ export function ContactSetup() {
     setIsModalOpen(false);
     setEditingContactId(null);
     setFormErrors({});
+    if (contactId) {
+      navigate("/configuracion/contactos", { replace: true });
+    }
     window.setTimeout(() => document.getElementById("addEmergencyContact")?.focus(), 0);
   };
 
@@ -301,6 +306,31 @@ export function ContactSetup() {
     setFormErrors({});
     setIsModalOpen(true);
   };
+
+  useEffect(() => {
+    if (!contactId || editingContactId === contactId) {
+      return;
+    }
+
+    const contact = contacts.find((item) => item.id === contactId);
+
+    if (contact) {
+      missingEditContactIdRef.current = null;
+      setSuccessMessage("");
+      setWarningMessage("");
+      setErrorMessage("");
+      setEditingContactId(contact.id);
+      setFormData(getDraftFromContact(contact));
+      setFormErrors({});
+      setIsModalOpen(true);
+      return;
+    }
+
+    if (contacts.length > 0 && missingEditContactIdRef.current !== contactId) {
+      missingEditContactIdRef.current = contactId;
+      setWarningMessage("No encontramos ese contacto de emergencia en tu cuenta.");
+    }
+  }, [contactId, contacts, editingContactId]);
 
   const updateField = <Field extends keyof EmergencyContactDraft>(field: Field, value: EmergencyContactDraft[Field]) => {
     setFormData((current) => ({
