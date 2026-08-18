@@ -168,7 +168,7 @@ export function ResetPassword() {
               label="Nueva contraseña"
               name="newPassword"
               onChange={(event) => updateField("newPassword", event.target.value)}
-              placeholder="Crea una contraseña segura"
+              placeholder="Ej. MotoSOS2026"
               value={formData.newPassword}
             />
             <PasswordRequirements id="new-password-requirements" password={formData.newPassword} />
@@ -181,7 +181,7 @@ export function ResetPassword() {
             label="Confirmar nueva contraseña"
             name="confirmNewPassword"
             onChange={(event) => updateField("confirmPassword", event.target.value)}
-            placeholder="Repite tu nueva contraseña"
+            placeholder="Ej. MotoSOS2026"
             value={formData.confirmPassword}
           />
 

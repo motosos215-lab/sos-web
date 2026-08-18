@@ -162,7 +162,7 @@ export function Login() {
                 setErrors((current) => ({ ...current, email: undefined }));
               }
             }}
-            placeholder="tu@email.com"
+            placeholder="ejemplo@correo.com"
             spellCheck={false}
             type="email"
             value={values.email}
@@ -182,7 +182,7 @@ export function Login() {
                 setErrors((current) => ({ ...current, password: undefined }));
               }
             }}
-            placeholder="Mínimo 8 caracteres"
+            placeholder="Ej. MotoSOS2026"
             spellCheck={false}
             value={values.password}
           />

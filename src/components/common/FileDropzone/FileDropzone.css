@@ -1,12 +1,13 @@
 .file-dropzone {
   display: grid;
   gap: 0.5rem;
+  min-width: 0;
 }
 
 .file-dropzone__label {
   color: var(--color-text);
   font-size: 0.92rem;
-  font-weight: 700;
+  font-weight: 800;
 }
 
 .file-dropzone__box {
@@ -14,7 +15,7 @@
   gap: 0.55rem;
   padding: 1rem;
   text-align: center;
-  background: rgba(25, 75, 204, 0.04);
+  background: rgba(24, 169, 87, 0.05);
   border: 1px dashed var(--color-border);
   border-radius: var(--radius-md);
   transition:
@@ -25,9 +26,9 @@
 
 .file-dropzone__box--dragging,
 .file-dropzone__box:focus-within {
-  background: rgba(25, 75, 204, 0.08);
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 4px rgba(25, 75, 204, 0.1);
+  background: rgba(24, 169, 87, 0.09);
+  border-color: var(--color-success);
+  box-shadow: var(--focus-ring);
 }
 
 .file-dropzone__box[aria-invalid="true"] {
@@ -102,7 +103,7 @@
 }
 
 .file-dropzone__file button:focus-visible {
-  outline: 3px solid rgba(25, 75, 204, 0.28);
+  outline: 3px solid rgba(24, 169, 87, 0.26);
   outline-offset: 3px;
   border-radius: 6px;
 }
@@ -111,5 +112,5 @@
   margin: 0;
   color: var(--color-danger);
   font-size: 0.84rem;
-  font-weight: 600;
+  font-weight: 700;
 }

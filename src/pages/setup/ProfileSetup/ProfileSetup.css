@@ -1,6 +1,7 @@
 .profile-setup {
   display: grid;
-  gap: 1rem;
+  gap: var(--space-4);
+  min-width: 0;
 }
 
 .profile-setup__header {
@@ -17,7 +18,7 @@
 }
 
 .profile-setup__header p {
-  color: var(--color-primary);
+  color: var(--color-success-dark);
   font-size: 0.9rem;
   font-weight: 900;
 }
@@ -39,20 +40,21 @@
 
 .profile-setup__form {
   display: grid;
-  gap: 1rem;
+  gap: var(--space-4);
   overflow-anchor: none;
 }
 
 .profile-setup__grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-4);
 }
 
 .profile-setup__column,
 .profile-setup__security-grid {
   display: grid;
   gap: 1rem;
+  min-width: 0;
 }
 
 .profile-setup__security-grid {
@@ -78,7 +80,7 @@
 }
 
 .profile-setup__privacy {
-  color: var(--color-primary-dark);
+  color: var(--color-success-dark);
 }
 
 .profile-setup__counter {

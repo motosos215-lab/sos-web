@@ -90,7 +90,7 @@ export function ForgotPassword() {
                 setErrors((current) => ({ ...current, email: undefined, form: undefined }));
               }
             }}
-            placeholder="tu@email.com"
+            placeholder="ejemplo@correo.com"
             type="email"
             value={email}
           />

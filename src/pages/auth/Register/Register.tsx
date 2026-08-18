@@ -186,7 +186,7 @@ export function Register() {
             label="Nombre completo"
             name="fullName"
             onChange={(event) => updateField("fullName", event.target.value)}
-            placeholder="Nombre y apellido"
+            placeholder="Ej. Juan Pérez"
             type="text"
             value={formData.fullName}
           />
@@ -198,7 +198,7 @@ export function Register() {
             label="Correo electrónico"
             name="email"
             onChange={(event) => updateField("email", event.target.value)}
-            placeholder="tu@email.com"
+            placeholder="ejemplo@correo.com"
             type="email"
             value={formData.email}
           />
@@ -213,7 +213,7 @@ export function Register() {
             name="phone"
             onChange={(event) => updateField("phone", normalizePhone(event.target.value).slice(0, 10))}
             pattern="[0-9]{10}"
-            placeholder="7732670267"
+            placeholder="Ej. 7711234567"
             type="text"
             value={formData.phone}
           />
@@ -228,7 +228,7 @@ export function Register() {
                 label="Contraseña"
                 name="password"
                 onChange={(event) => updateField("password", event.target.value)}
-                placeholder="Crea una contraseña segura"
+                placeholder="Ej. MotoSOS2026"
                 value={formData.password}
               />
               <PasswordRequirements id="password-requirements" password={formData.password} />
@@ -241,7 +241,7 @@ export function Register() {
               label="Confirmar contraseña"
               name="confirmPassword"
               onChange={(event) => updateField("confirmPassword", event.target.value)}
-              placeholder="Repite tu contraseña"
+              placeholder="Ej. MotoSOS2026"
               value={formData.confirmPassword}
             />
           </div>

@@ -85,7 +85,7 @@ export function DashboardTopbar({ isMenuOpen, onLogout, onToggleMenu, session }:
           Buscar en el sistema
         </label>
         <Search aria-hidden="true" size={18} />
-        <input id="dashboard-search" name="search" placeholder="Buscar en el sistema..." type="search" />
+        <input id="dashboard-search" name="search" placeholder="Ej. alerta, contacto o folio" type="search" />
       </form>
 
       <div className="dashboard-topbar__actions">

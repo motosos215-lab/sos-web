@@ -13,7 +13,7 @@
 
 .register-card__heading p {
   margin: 0 0 0.4rem;
-  color: var(--color-primary);
+  color: var(--color-success-dark);
   font-size: 0.9rem;
   font-weight: 900;
 }
@@ -28,7 +28,7 @@
 
 .register-form {
   display: grid;
-  gap: 1rem;
+  gap: var(--space-4);
 }
 
 .register-form__password-grid {
@@ -53,7 +53,7 @@
 .register-form__legal-links button,
 .register-card__footer a {
   padding: 0;
-  color: var(--color-primary);
+  color: var(--color-success-dark);
   font-weight: 800;
   text-decoration: none;
   background: transparent;
@@ -63,7 +63,7 @@
 
 .register-form__legal-links button:hover,
 .register-card__footer a:hover {
-  color: var(--color-primary-dark);
+  color: var(--color-navy);
   text-decoration: underline;
 }
 
@@ -112,8 +112,8 @@
 .register-card__info {
   margin-top: 1.25rem;
   padding: 1rem;
-  background: rgba(25, 75, 204, 0.07);
-  border: 1px solid rgba(25, 75, 204, 0.14);
+  background: rgba(24, 169, 87, 0.08);
+  border: 1px solid rgba(24, 169, 87, 0.2);
   border-radius: var(--radius-md);
 }
 
@@ -139,6 +139,7 @@
 @media (max-width: 560px) {
   .register-card {
     border-radius: 20px;
+    box-shadow: 0 16px 44px rgba(16, 24, 40, 0.1);
   }
 }
 

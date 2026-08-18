@@ -17,7 +17,7 @@
   background: var(--color-surface);
   border: 1px solid rgba(208, 213, 221, 0.72);
   border-radius: var(--radius-lg);
-  box-shadow: 0 12px 36px rgba(16, 24, 40, 0.06);
+  box-shadow: var(--shadow-soft);
 }
 
 .plan-setup__header,
@@ -55,7 +55,7 @@
 
 .plan-setup__header p,
 .plan-setup__plans > div > p {
-  color: var(--color-primary);
+  color: var(--color-success-dark);
   font-size: 0.86rem;
   font-weight: 900;
   letter-spacing: 0.02em;
@@ -183,8 +183,8 @@
 }
 
 .plan-card__icon--plus {
-  color: var(--color-primary);
-  background: rgba(25, 75, 204, 0.12);
+  color: var(--color-navy-soft);
+  background: rgba(6, 38, 83, 0.1);
 }
 
 .plan-card__icon--familiar_pro {
@@ -254,7 +254,7 @@
 
 .plan-card__limit dt svg {
   flex: 0 0 auto;
-  color: var(--color-primary);
+  color: var(--color-success-dark);
 }
 
 .plan-card__limit dd {
@@ -325,8 +325,8 @@
 
 .plan-status--available,
 .plan-status--pending {
-  color: var(--color-primary);
-  background: rgba(25, 75, 204, 0.08);
+  color: var(--color-navy-soft);
+  background: rgba(6, 38, 83, 0.08);
 }
 
 .plan-status--expired,
@@ -403,12 +403,12 @@
 }
 
 .plan-notice--business {
-  background: rgba(25, 75, 204, 0.05);
+  background: rgba(6, 38, 83, 0.04);
 }
 
 .plan-notice--business .plan-notice__icon {
-  color: var(--color-primary);
-  background: rgba(25, 75, 204, 0.1);
+  color: var(--color-navy-soft);
+  background: rgba(6, 38, 83, 0.09);
 }
 
 .plan-notice--payment {
@@ -424,8 +424,8 @@
   width: 52px;
   height: 52px;
   place-items: center;
-  color: var(--color-primary);
-  background: rgba(25, 75, 204, 0.1);
+  color: var(--color-navy-soft);
+  background: rgba(6, 38, 83, 0.09);
   border-radius: 16px;
 }
 
@@ -442,8 +442,8 @@
   width: max-content;
   max-width: 100%;
   padding: 0.5rem 0.7rem;
-  color: var(--color-primary-dark);
-  background: rgba(25, 75, 204, 0.08);
+  color: var(--color-navy);
+  background: rgba(6, 38, 83, 0.06);
   border-radius: var(--radius-md);
   font-weight: 800;
 }
@@ -462,8 +462,8 @@
 
 .plan-notice__message {
   padding: 0.75rem;
-  color: var(--color-primary-dark);
-  background: rgba(25, 75, 204, 0.08);
+  color: var(--color-navy);
+  background: rgba(6, 38, 83, 0.06);
   border-radius: var(--radius-md);
 }
 

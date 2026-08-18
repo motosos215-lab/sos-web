@@ -470,6 +470,7 @@ export function ProfileSetup() {
                   label="Nombre completo"
                   name="fullName"
                   onChange={(event) => updateField("fullName", event.target.value)}
+                  placeholder="Ej. Juan Pérez"
                   type="text"
                   value={formData.fullName}
                 />
@@ -481,6 +482,7 @@ export function ProfileSetup() {
                   maxLength={18}
                   name="personalId"
                   onChange={(event) => updateField("personalId", event.target.value.toUpperCase().replace(/[^A-Z0-9]/g, ""))}
+                  placeholder="Ej. PEHJ900101HDFRNN09"
                   type="text"
                   value={formData.personalId}
                 />
@@ -492,6 +494,7 @@ export function ProfileSetup() {
                   label="Correo electrónico"
                   name="email"
                   onChange={(event) => updateField("email", event.target.value)}
+                  placeholder="ejemplo@correo.com"
                   type="email"
                   value={formData.email}
                 />
@@ -502,6 +505,7 @@ export function ProfileSetup() {
                   label="Dirección"
                   name="address"
                   onChange={(event) => updateField("address", event.target.value)}
+                  placeholder="Ej. Av. Hidalgo 123, Col. Centro"
                   type="text"
                   value={formData.address}
                 />
@@ -513,7 +517,7 @@ export function ProfileSetup() {
                   name="bloodType"
                   onChange={(event) => updateField("bloodType", event.target.value)}
                   options={bloodTypeOptions}
-                  placeholder="Selecciona una opción"
+                  placeholder="Ej. O+"
                   value={formData.bloodType}
                 />
               </div>
@@ -539,6 +543,7 @@ export function ProfileSetup() {
                   name="phone"
                   onChange={(event) => updateField("phone", normalizeNationalPhone(event.target.value))}
                   pattern="[0-9]{10}"
+                  placeholder="Ej. 7711234567"
                   type="text"
                   value={formData.phone}
                 />
@@ -550,7 +555,7 @@ export function ProfileSetup() {
                   name="city"
                   onChange={(event) => updateField("city", event.target.value)}
                   options={cityOptions}
-                  placeholder="Selecciona tu ciudad"
+                  placeholder="Ej. Pachuca"
                   value={formData.city}
                 />
                 <div>
@@ -562,6 +567,7 @@ export function ProfileSetup() {
                     maxLength={300}
                     name="medicalConditions"
                     onChange={(event) => updateField("medicalConditions", event.target.value)}
+                    placeholder="Ej. Alergia a penicilina o ninguna"
                     value={formData.medicalConditions}
                   />
                   <p className="profile-setup__hint">Escribe 'Ninguna' si no tienes información que registrar.</p>
@@ -586,6 +592,7 @@ export function ProfileSetup() {
                 name="emergencyContactFullName"
                 onBlur={() => validateEmergencyContactOnBlur("fullName")}
                 onChange={(event) => updateEmergencyContact("fullName", event.target.value)}
+                placeholder="Ej. María Pérez"
                 type="text"
                 value={formData.emergencyContact.fullName}
               />
@@ -598,7 +605,7 @@ export function ProfileSetup() {
                 onBlur={() => validateEmergencyContactOnBlur("relationship")}
                 onChange={(event) => updateEmergencyContact("relationship", event.target.value)}
                 options={emergencyRelationshipOptions}
-                placeholder="Selecciona una relación"
+                placeholder="Ej. Madre"
                 value={formData.emergencyContact.relationship}
               />
               <Input
@@ -612,6 +619,7 @@ export function ProfileSetup() {
                 onBlur={() => validateEmergencyContactOnBlur("phone")}
                 onChange={(event) => updateEmergencyContact("phone", normalizeEmergencyPhone(event.target.value))}
                 pattern="[0-9]{10}"
+                placeholder="Ej. 7711234567"
                 type="text"
                 value={formData.emergencyContact.phone}
               />

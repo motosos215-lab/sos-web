@@ -4,6 +4,7 @@
 
 html {
   min-width: 320px;
+  scroll-behavior: smooth;
   background: var(--color-background);
 }
 
@@ -18,11 +19,37 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+::selection {
+  color: var(--color-surface);
+  background: var(--color-success-dark);
+}
+
 button,
 input,
 select,
 textarea {
   font: inherit;
+}
+
+button,
+input,
+select,
+textarea,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  touch-action: manipulation;
+}
+
+img,
+svg {
+  max-width: 100%;
 }
 
 a {
@@ -31,6 +58,17 @@ a {
 
 #root {
   min-height: 100vh;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }
 
 .sr-only {

@@ -1,6 +1,6 @@
 .devices-setup {
   display: grid;
-  gap: 1rem;
+  gap: var(--space-4);
   min-width: 0;
 }
 
@@ -14,7 +14,7 @@
   background: var(--color-surface);
   border: 1px solid rgba(208, 213, 221, 0.72);
   border-radius: var(--radius-lg);
-  box-shadow: 0 12px 36px rgba(16, 24, 40, 0.06);
+  box-shadow: var(--shadow-soft);
 }
 
 .devices-setup__header,
@@ -53,7 +53,7 @@
 .device-link-card header p,
 .device-card__header p,
 .devices-setup__status > header p {
-  color: var(--color-primary);
+  color: var(--color-success-dark);
   font-size: 0.86rem;
   font-weight: 900;
 }
@@ -85,13 +85,13 @@
 }
 
 .devices-setup__header strong {
-  color: var(--color-primary-dark);
+  color: var(--color-success-dark);
   font-size: 0.95rem;
 }
 
 .devices-setup__notice {
-  background: rgba(25, 75, 204, 0.06);
-  border-color: rgba(25, 75, 204, 0.16);
+  background: rgba(24, 169, 87, 0.07);
+  border-color: rgba(24, 169, 87, 0.2);
 }
 
 .devices-setup__messages {
@@ -128,7 +128,7 @@
   display: grid;
   gap: 0.85rem;
   padding: 1rem;
-  background: #fbfdff;
+  background: var(--color-surface-muted);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
 }
@@ -164,10 +164,10 @@
   display: inline-flex;
   width: max-content;
   padding: 0.3rem 0.55rem;
-  color: var(--color-primary);
+  color: var(--color-navy-soft);
   font-size: 0.78rem;
   font-weight: 900;
-  background: rgba(25, 75, 204, 0.08);
+  background: rgba(6, 38, 83, 0.08);
   border-radius: 999px;
 }
 
@@ -186,14 +186,14 @@
   display: block;
   padding: 0.9rem;
   overflow-wrap: anywhere;
-  color: var(--color-primary-dark);
+  color: var(--color-navy);
   font-size: clamp(1rem, 4vw, 1.3rem);
   font-weight: 900;
   letter-spacing: 0.08em;
   text-align: center;
   user-select: all;
   background: var(--color-surface);
-  border: 1px dashed rgba(25, 75, 204, 0.35);
+  border: 1px dashed rgba(24, 169, 87, 0.45);
   border-radius: var(--radius-md);
 }
 
@@ -274,7 +274,7 @@
   display: grid;
   gap: 0.2rem;
   padding: 0.75rem;
-  background: #fbfdff;
+  background: var(--color-surface-muted);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
 }
@@ -328,7 +328,7 @@
 
 .device-status--pending,
 .device-connection--medium {
-  color: var(--color-primary);
+  color: var(--color-navy-soft);
 }
 
 .device-connection--weak {
@@ -384,8 +384,8 @@
   display: grid;
   gap: 0.65rem;
   padding: 1rem;
-  background: rgba(25, 75, 204, 0.04);
-  border: 1px solid rgba(25, 75, 204, 0.14);
+  background: rgba(24, 169, 87, 0.05);
+  border: 1px solid rgba(24, 169, 87, 0.18);
   border-radius: var(--radius-md);
 }
 
@@ -409,7 +409,8 @@
   display: grid;
   place-items: center;
   padding: 1rem;
-  background: rgba(6, 38, 83, 0.48);
+  background: rgba(3, 23, 47, 0.58);
+  backdrop-filter: blur(8px);
 }
 
 .device-modal__dialog {
@@ -450,7 +451,7 @@
 
 .devices-setup button:focus-visible,
 .device-modal button:focus-visible {
-  outline: 3px solid rgba(25, 75, 204, 0.28);
+  outline: 3px solid rgba(24, 169, 87, 0.26);
   outline-offset: 3px;
   border-radius: 6px;
 }

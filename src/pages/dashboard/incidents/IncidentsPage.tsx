@@ -173,7 +173,7 @@ export function IncidentsPage() {
           <span>Buscar</span>
           <input
             onChange={(event) => updateFilters({ search: event.target.value })}
-            placeholder="Buscar por folio, conductor o vehículo..."
+            placeholder="Ej. SOS-2026, Juan Pérez o ABC-123"
             type="search"
             value={filters.search}
           />

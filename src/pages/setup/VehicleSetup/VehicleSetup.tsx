@@ -399,7 +399,7 @@ export function VehicleSetup() {
                   name="brand"
                   onChange={(event) => updateField("brand", event.target.value)}
                   options={brandOptions}
-                  placeholder="Selecciona la marca"
+                  placeholder="Ej. Italika"
                   value={formData.brand}
                 />
                 {formData.brand === "Otra" ? (
@@ -411,6 +411,7 @@ export function VehicleSetup() {
                     maxLength={50}
                     name="customBrand"
                     onChange={(event) => updateField("customBrand", event.target.value)}
+                    placeholder="Ej. Vento"
                     type="text"
                     value={formData.customBrand}
                   />
@@ -423,6 +424,7 @@ export function VehicleSetup() {
                   maxLength={50}
                   name="model"
                   onChange={(event) => updateField("model", event.target.value)}
+                  placeholder="Ej. FT150"
                   type="text"
                   value={formData.model}
                 />
@@ -434,7 +436,7 @@ export function VehicleSetup() {
                   name="year"
                   onChange={(event) => updateField("year", event.target.value ? Number(event.target.value) : "")}
                   options={yearOptions}
-                  placeholder="Selecciona el año"
+                  placeholder="Ej. 2024"
                   value={formData.year}
                 />
                 <div>
@@ -447,6 +449,7 @@ export function VehicleSetup() {
                     maxLength={40}
                     name="alias"
                     onChange={(event) => updateField("alias", event.target.value)}
+                    placeholder="Ej. Moto diaria"
                     type="text"
                     value={formData.alias}
                   />
@@ -465,6 +468,7 @@ export function VehicleSetup() {
                   maxLength={30}
                   name="color"
                   onChange={(event) => updateField("color", event.target.value)}
+                  placeholder="Ej. Negro mate"
                   type="text"
                   value={formData.color}
                 />
@@ -479,6 +483,7 @@ export function VehicleSetup() {
                     name="licensePlate"
                     onBlur={() => updateField("licensePlate", formData.licensePlate.trim().toUpperCase())}
                     onChange={(event) => updateField("licensePlate", event.target.value.toUpperCase())}
+                    placeholder="Ej. ABC-123"
                     type="text"
                     value={formData.licensePlate}
                   />
@@ -497,6 +502,7 @@ export function VehicleSetup() {
                     name="vinOrSerialNumber"
                     onBlur={() => updateField("vinOrSerialNumber", formData.vinOrSerialNumber.replace(/\s/g, "").toUpperCase())}
                     onChange={(event) => updateField("vinOrSerialNumber", event.target.value.toUpperCase().replace(/\s/g, ""))}
+                    placeholder="Ej. 3H1PCX2A9LD123456"
                     type="text"
                     value={formData.vinOrSerialNumber}
                   />
@@ -522,7 +528,7 @@ export function VehicleSetup() {
                   name="mainUse"
                   onChange={(event) => updateField("mainUse", event.target.value as VehicleMainUse | "")}
                   options={mainUseOptions}
-                  placeholder="Selecciona el uso principal"
+                  placeholder="Ej. Trabajo"
                   value={formData.mainUse}
                 />
                 <Select
@@ -533,7 +539,7 @@ export function VehicleSetup() {
                   name="circulationCity"
                   onChange={(event) => updateField("circulationCity", event.target.value)}
                   options={cityOptions}
-                  placeholder="Selecciona la ciudad"
+                  placeholder="Ej. Pachuca"
                   value={formData.circulationCity}
                 />
                 {formData.circulationCity === "Otra" ? (
@@ -545,6 +551,7 @@ export function VehicleSetup() {
                     maxLength={60}
                     name="customCirculationCity"
                     onChange={(event) => updateField("customCirculationCity", event.target.value)}
+                    placeholder="Ej. Tulancingo"
                     type="text"
                     value={formData.customCirculationCity}
                   />
@@ -560,7 +567,7 @@ export function VehicleSetup() {
                   name="useFrequency"
                   onChange={(event) => updateField("useFrequency", event.target.value as VehicleUseFrequency | "")}
                   options={frequencyOptions}
-                  placeholder="Selecciona la frecuencia"
+                  placeholder="Ej. Diario"
                   value={formData.useFrequency}
                 />
               </div>
