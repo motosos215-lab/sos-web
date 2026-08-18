@@ -38,6 +38,9 @@ const IncidentsPage = lazy(() =>
 const IncidentDetailPage = lazy(() =>
   import("../pages/dashboard/incidents/IncidentDetailPage").then((module) => ({ default: module.IncidentDetailPage })),
 );
+const MonitorAlertDetailPage = lazy(() =>
+  import("../pages/dashboard/monitor/MonitorAlertDetailPage").then((module) => ({ default: module.MonitorAlertDetailPage })),
+);
 const ProfileSetup = lazy(() => import("../pages/setup/ProfileSetup/ProfileSetup").then((module) => ({ default: module.ProfileSetup })));
 const VehicleSetup = lazy(() => import("../pages/setup/VehicleSetup/VehicleSetup").then((module) => ({ default: module.VehicleSetup })));
 const ContactSetup = lazy(() => import("../pages/setup/ContactSetup/ContactSetup").then((module) => ({ default: module.ContactSetup })));
@@ -62,13 +65,16 @@ export function AppRoutes() {
             <Route path="/dashboard" element={<DashboardLayout />}>
               <Route index element={<Navigate to="/dashboard/resumen" replace />} />
               <Route path="resumen" element={<DashboardSummaryPage />} />
-              <Route element={<DashboardRoleRoute allowedRoles={["conductor", "administrador"]} />}>
+              <Route element={<DashboardRoleRoute allowedRoles={["conductor"]} />}>
                 <Route path="incidentes" element={<IncidentsPage />} />
                 <Route path="incidentes/:incidentId" element={<IncidentDetailPage />} />
                 <Route path="mapa" element={<DashboardMapPage />} />
                 <Route path="contactos" element={<DashboardContactsPage />} />
                 <Route path="reportes" element={<DashboardReportsPage />} />
                 <Route path="notificaciones" element={<DashboardNotificationsPage />} />
+              </Route>
+              <Route element={<DashboardRoleRoute allowedRoles={["monitor"]} />}>
+                <Route path="alertas/:alertId" element={<MonitorAlertDetailPage />} />
               </Route>
               <Route path="configuracion" element={<DashboardSettingsPage />} />
             </Route>

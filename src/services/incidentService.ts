@@ -22,7 +22,8 @@ import { getApiErrorMessage } from "../utils/apiErrors";
 type IncidentApiRecord = Record<string, unknown>;
 
 const severityRank: Record<IncidentSeverity, number> = { critical: 4, high: 3, medium: 2, low: 1 };
-const SIMULATED_INCIDENT_FOLIO = "DEMO-2026-001";
+export const SIMULATED_INCIDENT_FOLIO = "DEMO-2026-001";
+export const SIMULATED_TRIP_ID = "demo-trip";
 
 export function createSimulatedIncident(session: SimulatedSession | null): IncidentRecord {
   const occurredAt = new Date(Date.now() - 8 * 60 * 1000).toISOString();
@@ -30,6 +31,7 @@ export function createSimulatedIncident(session: SimulatedSession | null): Incid
   return {
     id: SIMULATED_INCIDENT_FOLIO,
     folio: SIMULATED_INCIDENT_FOLIO,
+    tripId: SIMULATED_TRIP_ID,
     ownerUserId: session?.userId ?? "demo-user",
     driver: {
       id: session?.userId ?? "demo-user",
@@ -271,6 +273,7 @@ function toIncidentRecord(record: IncidentApiRecord, session: SimulatedSession |
   return {
     id,
     folio: id,
+    tripId: readString(record.tripId) || null,
     ownerUserId: session?.userId ?? "",
     driver: {
       id: session?.userId ?? "",

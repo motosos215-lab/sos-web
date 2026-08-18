@@ -1,8 +1,16 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, MapPinned, RefreshCw } from "lucide-react";
+import { ArrowLeft, Download, FileUp, MapPinned, RefreshCw, Route as RouteIcon } from "lucide-react";
 import { AlertMessage } from "../../../components/common/AlertMessage/AlertMessage";
 import { Button } from "../../../components/common/Button/Button";
+import { getRiderEmergencyStatus, type EmergencyStatusSummary } from "../../../services/emergencyStatusService";
+import {
+  downloadEvidence,
+  formatFileSize,
+  listRiderEvidenceByIncident,
+  uploadEvidence,
+  type EvidenceAttachment,
+} from "../../../services/evidenceService";
 import {
   acknowledgeIncident,
   closeIncident,
@@ -16,6 +24,7 @@ import {
   startIncidentFollowUp,
 } from "../../../services/incidentService";
 import { getSession } from "../../../services/sessionService";
+import { getTripRoutePreview, type TripRouteSummary } from "../../../services/tripRouteService";
 import type {
   IncidentActor,
   IncidentCallData,
@@ -134,6 +143,18 @@ export function IncidentDetailPage() {
   const [message, setMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [isActionRunning, setIsActionRunning] = useState(false);
+  const [routeSummary, setRouteSummary] = useState<TripRouteSummary | null>(null);
+  const [routeMessage, setRouteMessage] = useState("");
+  const [isRouteLoading, setIsRouteLoading] = useState(false);
+  const [emergencyStatus, setEmergencyStatus] = useState<EmergencyStatusSummary | null>(null);
+  const [evidenceItems, setEvidenceItems] = useState<EvidenceAttachment[]>([]);
+  const [evidenceMessage, setEvidenceMessage] = useState("");
+  const [isEvidenceLoading, setIsEvidenceLoading] = useState(false);
+  const [isEvidenceUploading, setIsEvidenceUploading] = useState(false);
+  const [selectedEvidenceFile, setSelectedEvidenceFile] = useState<File | null>(null);
+  const [evidenceDescription, setEvidenceDescription] = useState("");
+  const [evidenceType, setEvidenceType] = useState("Photo");
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [note, setNote] = useState("");
   const [callResult, setCallResult] = useState<IncidentCallData["result"]>("no_answer");
   const [textMessage, setTextMessage] = useState("Estamos atendiendo tu alerta MotoSOS. Confirma si necesitas ayuda");
@@ -143,6 +164,42 @@ export function IncidentDetailPage() {
   const [confirmedClose, setConfirmedClose] = useState(false);
   const [safeSecondConfirm, setSafeSecondConfirm] = useState(false);
   const permissions = useMemo(() => getIncidentPermissions(session, incident), [session, incident]);
+
+  const loadRelatedIncidentData = useCallback(
+    async (nextIncident: IncidentRecord) => {
+      if (session?.role !== "conductor") {
+        return;
+      }
+
+      setRouteMessage("");
+      setEvidenceMessage("");
+      setEmergencyStatus(null);
+      setEvidenceItems([]);
+      setIsRouteLoading(Boolean(nextIncident.tripId));
+      setIsEvidenceLoading(true);
+
+      const [statusResult, evidenceResult, routeResult] = await Promise.all([
+        getRiderEmergencyStatus(nextIncident.id).catch(() => null),
+        listRiderEvidenceByIncident(nextIncident.id).catch(() => null),
+        nextIncident.tripId ? getTripRoutePreview(nextIncident.tripId).catch(() => null) : Promise.resolve(null),
+      ]);
+
+      setEmergencyStatus(statusResult);
+      setEvidenceItems(evidenceResult ?? []);
+      setRouteSummary(routeResult);
+      setIsRouteLoading(false);
+      setIsEvidenceLoading(false);
+
+      if (nextIncident.tripId && !routeResult) {
+        setRouteMessage("La ruta del viaje todavía no está disponible para este incidente.");
+      }
+
+      if (!evidenceResult) {
+        setEvidenceMessage("No pudimos cargar evidencias en este momento.");
+      }
+    },
+    [session?.role],
+  );
 
   const loadIncident = useCallback(
     async (refreshing = false) => {
@@ -156,6 +213,7 @@ export function IncidentDetailPage() {
         const response = refreshing ? await refreshIncident(folio, session) : await getIncidentById(folio, session);
         if (response.success && response.data) {
           setIncident(response.data);
+          void loadRelatedIncidentData(response.data);
         } else {
           setIncident(null);
           setErrorMessage(response.message);
@@ -168,8 +226,59 @@ export function IncidentDetailPage() {
         setIsRefreshing(false);
       }
     },
-    [folio, session],
+    [folio, loadRelatedIncidentData, session],
   );
+
+  const handleEvidenceUpload = async () => {
+    if (!incident || !selectedEvidenceFile || isEvidenceUploading) {
+      return;
+    }
+
+    setIsEvidenceUploading(true);
+    setEvidenceMessage("");
+    setErrorMessage("");
+
+    try {
+      const result = await uploadEvidence({
+        role: "rider",
+        incidentId: incident.id,
+        file: selectedEvidenceFile,
+        description: evidenceDescription,
+        evidenceType,
+      });
+      setEvidenceItems((current) => [result.evidenceAttachment, ...current.filter((item) => item.id !== result.evidenceAttachment.id)]);
+      setEvidenceMessage(result.isDuplicate ? "Esta evidencia ya estaba registrada." : "Evidencia subida correctamente.");
+      setSelectedEvidenceFile(null);
+      setEvidenceDescription("");
+
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    } catch (error) {
+      setErrorMessage(getApiErrorMessage(error));
+    } finally {
+      setIsEvidenceUploading(false);
+    }
+  };
+
+  const handleEvidenceDownload = async (item: EvidenceAttachment) => {
+    setErrorMessage("");
+
+    try {
+      const download = await downloadEvidence("rider", item.id, item.fileName);
+      const url = URL.createObjectURL(download.blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = download.fileName;
+      anchor.rel = "noopener";
+      document.body.append(anchor);
+      anchor.click();
+      anchor.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (error) {
+      setErrorMessage(getApiErrorMessage(error));
+    }
+  };
 
   useEffect(() => {
     void loadIncident(false);
@@ -178,6 +287,7 @@ export function IncidentDetailPage() {
   const applyResult = (result: IncidentActionResult) => {
     if (result.success && result.data) {
       setIncident(result.data);
+      void loadRelatedIncidentData(result.data);
       setMessage(result.message);
       setErrorMessage("");
       setModal(null);
@@ -308,6 +418,23 @@ export function IncidentDetailPage() {
             {incident.locationLabel}. Precisión GPS:{" "}
             {incident.device.gpsAccuracyMeters === null ? "Sin información" : `${incident.device.gpsAccuracyMeters} m`}.
           </p>
+          <div className="incident-route-summary" aria-live="polite">
+            <RouteIcon aria-hidden="true" size={18} />
+            {isRouteLoading ? (
+              <span>Cargando ruta real del viaje...</span>
+            ) : routeSummary && routeSummary.returnedPoints > 0 ? (
+              <span>
+                Ruta real disponible: {routeSummary.returnedPoints} de {routeSummary.totalPoints} puntos GPS.
+                <small>
+                  Inicio {routeSummary.points[0]?.latitude.toFixed(5)}, {routeSummary.points[0]?.longitude.toFixed(5)} · Último{" "}
+                  {routeSummary.points[routeSummary.points.length - 1]?.latitude.toFixed(5)},{" "}
+                  {routeSummary.points[routeSummary.points.length - 1]?.longitude.toFixed(5)}
+                </small>
+              </span>
+            ) : (
+              <span>{routeMessage || "Sin ruta GPS registrada para este incidente."}</span>
+            )}
+          </div>
           <Button onClick={() => setModal("externalMap")} type="button" variant="secondary">
             Abrir en mapa externo
           </Button>
@@ -493,6 +620,110 @@ export function IncidentDetailPage() {
             <AlertMessage variant="warning">El dispositivo no ha sincronizado recientemente</AlertMessage>
           ) : null}
         </article>
+        <article>
+          <h2>Estado operativo</h2>
+          {emergencyStatus ? (
+            <dl>
+              <div>
+                <dt>Estado general</dt>
+                <dd>{emergencyStatus.overallStatus}</dd>
+              </div>
+              <div>
+                <dt>Requiere atención</dt>
+                <dd>{emergencyStatus.requiresAttention ? "Sí" : "No"}</dd>
+              </div>
+              <div>
+                <dt>Notificaciones</dt>
+                <dd>
+                  {emergencyStatus.notifications.simulatedSent} enviadas · {emergencyStatus.notifications.failed} fallidas
+                </dd>
+              </div>
+              <div>
+                <dt>Respuestas de monitores</dt>
+                <dd>
+                  {emergencyStatus.acknowledgements.acknowledged} confirmadas · {emergencyStatus.acknowledgements.declined} rechazadas
+                </dd>
+              </div>
+              <div>
+                <dt>Ubicación compartida</dt>
+                <dd>
+                  {emergencyStatus.location.available
+                    ? `${emergencyStatus.location.latitude?.toFixed(5)}, ${emergencyStatus.location.longitude?.toFixed(5)}`
+                    : "No disponible"}
+                </dd>
+              </div>
+            </dl>
+          ) : (
+            <p>El resumen operativo todavía no está disponible para este incidente.</p>
+          )}
+        </article>
+      </section>
+
+      <section className="incident-evidence" aria-labelledby="incident-evidence-title">
+        <header>
+          <div>
+            <h2 id="incident-evidence-title">Evidencias</h2>
+            <p>Archivos protegidos por permisos del backend. MotoSOS no expone URLs públicas de storage.</p>
+          </div>
+        </header>
+        {evidenceMessage ? (
+          <AlertMessage variant={evidenceMessage.includes("correctamente") ? "success" : "warning"}>{evidenceMessage}</AlertMessage>
+        ) : null}
+        <div className="incident-evidence__upload">
+          <label>
+            Archivo
+            <input
+              accept=".jpg,.jpeg,.png,.webp,.pdf,.txt,image/jpeg,image/png,image/webp,application/pdf,text/plain"
+              onChange={(event) => setSelectedEvidenceFile(event.target.files?.[0] ?? null)}
+              ref={fileInputRef}
+              type="file"
+            />
+          </label>
+          <label>
+            Tipo
+            <select onChange={(event) => setEvidenceType(event.target.value)} value={evidenceType}>
+              <option value="Photo">Foto</option>
+              <option value="Document">Documento</option>
+              <option value="Text">Texto</option>
+            </select>
+          </label>
+          <label>
+            Descripción
+            <textarea
+              maxLength={1000}
+              onChange={(event) => setEvidenceDescription(event.target.value)}
+              placeholder="Ej. Foto del lugar del incidente"
+              value={evidenceDescription}
+            />
+          </label>
+          <Button
+            disabled={!selectedEvidenceFile}
+            isLoading={isEvidenceUploading}
+            loadingText="Subiendo..."
+            onClick={handleEvidenceUpload}
+            type="button"
+          >
+            <FileUp aria-hidden="true" size={16} /> Subir evidencia
+          </Button>
+        </div>
+        <div className="incident-evidence__list" aria-busy={isEvidenceLoading}>
+          {isEvidenceLoading ? <p>Cargando evidencias...</p> : null}
+          {!isEvidenceLoading && evidenceItems.length === 0 ? <p>No hay evidencias registradas para este incidente.</p> : null}
+          {evidenceItems.map((item) => (
+            <article key={item.id}>
+              <div>
+                <strong>{item.fileName}</strong>
+                <span>
+                  {item.evidenceType} · {formatFileSize(item.sizeBytes)} · {item.contentType}
+                </span>
+                {item.description ? <p>{item.description}</p> : null}
+              </div>
+              <Button onClick={() => void handleEvidenceDownload(item)} type="button" variant="secondary">
+                <Download aria-hidden="true" size={16} /> Descargar
+              </Button>
+            </article>
+          ))}
+        </div>
       </section>
 
       {incident.closure ? (

@@ -10,10 +10,11 @@ import { IncidentStatusBadge } from "./IncidentStatusBadge";
 
 interface ActiveIncidentCardProps {
   incident: DashboardIncident | null;
+  canOpenDetails?: boolean;
   isMonitor?: boolean;
 }
 
-export function ActiveIncidentCard({ incident, isMonitor = false }: ActiveIncidentCardProps) {
+export function ActiveIncidentCard({ canOpenDetails = true, incident, isMonitor = false }: ActiveIncidentCardProps) {
   const navigate = useNavigate();
   const [message, setMessage] = useState("");
 
@@ -32,6 +33,8 @@ export function ActiveIncidentCard({ incident, isMonitor = false }: ActiveIncide
     const copied = await copyTextToClipboard(`Alerta MotoSOS ${incident.folio}. Consulta la información desde el dashboard autorizado.`);
     setMessage(copied ? "Información de la alerta copiada" : "No pudimos copiar la información de la alerta");
   };
+
+  const monitorAlertId = incident.notificationDeliveryAttemptId;
 
   return (
     <section className="active-incident-card" aria-labelledby="active-incident-title">
@@ -89,7 +92,12 @@ export function ActiveIncidentCard({ incident, isMonitor = false }: ActiveIncide
         </p>
       ) : null}
       <div className="active-incident-card__actions">
-        {!isMonitor ? (
+        {isMonitor && monitorAlertId ? (
+          <Button onClick={() => navigate(`/dashboard/alertas/${encodeURIComponent(monitorAlertId)}`)} type="button">
+            Ver alerta
+          </Button>
+        ) : null}
+        {!isMonitor && canOpenDetails ? (
           <Button onClick={() => navigate(`/dashboard/incidentes/${encodeURIComponent(incident.folio)}`)} type="button">
             Ver detalles
           </Button>

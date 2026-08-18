@@ -5,11 +5,12 @@ import { IncidentSeverityBadge } from "./IncidentSeverityBadge";
 import { IncidentStatusBadge } from "./IncidentStatusBadge";
 
 interface RecentIncidentsListProps {
+  canOpenDetails?: boolean;
   incidents: DashboardIncident[];
   isMonitor?: boolean;
 }
 
-export function RecentIncidentsList({ incidents, isMonitor = false }: RecentIncidentsListProps) {
+export function RecentIncidentsList({ canOpenDetails = true, incidents, isMonitor = false }: RecentIncidentsListProps) {
   const navigate = useNavigate();
   const visibleIncidents = incidents.slice(0, 5);
 
@@ -54,12 +55,21 @@ export function RecentIncidentsList({ incidents, isMonitor = false }: RecentInci
                 {incident.locationLabel}
               </span>
               <span role="cell" data-label="Acción">
-                {isMonitor ? (
-                  <span>Desde resumen</span>
-                ) : (
+                {isMonitor && incident.notificationDeliveryAttemptId ? (
+                  <button
+                    onClick={() => navigate(`/dashboard/alertas/${encodeURIComponent(incident.notificationDeliveryAttemptId ?? "")}`)}
+                    type="button"
+                  >
+                    Ver alerta
+                  </button>
+                ) : isMonitor ? (
+                  <span>Sin detalle</span>
+                ) : canOpenDetails ? (
                   <button onClick={() => navigate(`/dashboard/incidentes/${encodeURIComponent(incident.folio)}`)} type="button">
                     Ver detalle
                   </button>
+                ) : (
+                  <span>Solo resumen</span>
                 )}
               </span>
             </div>

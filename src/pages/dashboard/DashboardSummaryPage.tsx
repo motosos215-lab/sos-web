@@ -16,7 +16,9 @@ import { RecentIncidentsList } from "./components/RecentIncidentsList";
 import "./DashboardSummaryPage.css";
 
 export function DashboardSummaryPage() {
-  const isMonitor = getSession()?.role === "monitor";
+  const sessionRole = getSession()?.role;
+  const isMonitor = sessionRole === "monitor";
+  const isAdmin = sessionRole === "administrador";
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [selectedIncident, setSelectedIncident] = useState<DashboardIncident | null>(null);
   const [filter, setFilter] = useState<DashboardStatusFilter>("all");
@@ -213,11 +215,11 @@ export function DashboardSummaryPage() {
             onSelectIncident={setSelectedIncident}
             selectedIncidentId={selectedIncident?.id ?? null}
           />
-          <ActiveIncidentCard incident={selectedIncident ?? filteredIncidents[0] ?? null} isMonitor={isMonitor} />
+          <ActiveIncidentCard canOpenDetails={!isAdmin} incident={selectedIncident ?? filteredIncidents[0] ?? null} isMonitor={isMonitor} />
         </section>
       )}
 
-      <RecentIncidentsList incidents={filteredIncidents} isMonitor={isMonitor} />
+      <RecentIncidentsList canOpenDetails={!isAdmin} incidents={filteredIncidents} isMonitor={isMonitor} />
     </div>
   );
 }

@@ -9,6 +9,7 @@ import type {
 } from "../types/dashboard";
 import { ApiRequestError, api, unwrap } from "./api";
 import { createSimulatedIncident, getIncidents } from "./incidentService";
+import { createDemoMonitorDashboardAlert } from "./monitorAlertService";
 import { getSession } from "./sessionService";
 import { getApiErrorMessage } from "../utils/apiErrors";
 
@@ -26,6 +27,9 @@ function toDashboardIncident(incident: IncidentRecord): DashboardIncident {
   return {
     id: incident.id,
     folio: incident.folio,
+    tripId: incident.tripId,
+    alertDispatchId: null,
+    notificationDeliveryAttemptId: null,
     driverName: incident.driver.fullName,
     vehicleAlias: incident.vehicle.alias,
     vehicleDescription: `${incident.vehicle.brand} ${incident.vehicle.model}, ${incident.vehicle.year}`,
@@ -81,8 +85,9 @@ function normalizeMonitorStatus(value: unknown): DashboardIncident["status"] {
 
 function toMonitorDashboardIncident(alert: Record<string, unknown>): DashboardIncident | null {
   const id = readString(alert.incidentId) || readString(alert.notificationDeliveryAttemptId) || readString(alert.id);
+  const notificationDeliveryAttemptId = readString(alert.notificationDeliveryAttemptId, readString(alert.id));
 
-  if (!id) {
+  if (!id || !notificationDeliveryAttemptId) {
     return null;
   }
 
@@ -92,6 +97,9 @@ function toMonitorDashboardIncident(alert: Record<string, unknown>): DashboardIn
   return {
     id,
     folio: id,
+    tripId: readString(alert.tripId) || null,
+    alertDispatchId: readString(alert.alertDispatchId) || null,
+    notificationDeliveryAttemptId,
     driverName: "Conductor MotoSOS",
     vehicleAlias: "Vehículo monitoreado",
     vehicleDescription: "Información disponible al abrir la alerta",
@@ -105,6 +113,33 @@ function toMonitorDashboardIncident(alert: Record<string, unknown>): DashboardIn
     elapsedMinutes,
     batteryLevel: null,
     signalStatus: "medium",
+  };
+}
+
+function createMonitorDemoDashboardIncident(): DashboardIncident {
+  const alert = createDemoMonitorDashboardAlert();
+  const occurredAt = alert.createdAtUtc;
+  const elapsedMinutes = Math.max(Math.floor((Date.now() - new Date(occurredAt).getTime()) / 60000), 0);
+
+  return {
+    id: alert.incidentId,
+    folio: alert.incidentId,
+    tripId: alert.tripId,
+    alertDispatchId: alert.alertDispatchId,
+    notificationDeliveryAttemptId: alert.notificationDeliveryAttemptId,
+    driverName: "Conductor demo",
+    vehicleAlias: "Vehículo monitoreado",
+    vehicleDescription: "MotoSOS Demo",
+    licensePlateMasked: "DEM-***",
+    incidentType: "Alerta demo de monitor",
+    status: normalizeMonitorStatus(alert.status),
+    severity: "critical",
+    occurredAt,
+    locationLabel: "Ubicación demo compartida",
+    coordinates: { latitude: 19.4326, longitude: -99.1332 },
+    elapsedMinutes,
+    batteryLevel: 76,
+    signalStatus: "strong",
   };
 }
 
@@ -146,6 +181,24 @@ function calculateMetrics(incidents: IncidentRecord[]): DashboardMetric[] {
 async function buildSummary(): Promise<DashboardSummary> {
   const session = getSession();
 
+  if (session?.role === "administrador") {
+    const [summaryResponse, incidentsResponse] = await Promise.all([
+      api.get<ApiResponse<unknown>>("/api/v1/admin/dashboard/summary"),
+      api.get<ApiResponse<unknown>>("/api/v1/admin/dashboard/incidents", { params: { pageNumber: 1, pageSize: 100 } }),
+    ]);
+    const summary = unwrap<unknown>(summaryResponse);
+    const incidentsPayload = unwrap<unknown>(incidentsResponse);
+    const incidentItems = readMonitorAlerts(incidentsPayload)
+      .map(toAdminDashboardIncident)
+      .filter((item): item is DashboardIncident => Boolean(item));
+
+    return {
+      metrics: calculateAdminMetrics(summary, incidentItems),
+      incidents: incidentItems,
+      lastUpdatedAt: new Date().toISOString(),
+    };
+  }
+
   if (session?.role === "monitor") {
     let incidents: DashboardIncident[] = [];
 
@@ -158,6 +211,10 @@ async function buildSummary(): Promise<DashboardSummary> {
       if (!isMonitorWithoutLinkedContacts(error)) {
         throw error;
       }
+    }
+
+    if (incidents.length === 0) {
+      incidents = [createMonitorDemoDashboardIncident()];
     }
 
     return {
@@ -180,6 +237,93 @@ async function buildSummary(): Promise<DashboardSummary> {
     incidents: incidents.map(toDashboardIncident),
     lastUpdatedAt: new Date().toISOString(),
   };
+}
+
+function normalizeAdminStatus(value: unknown): DashboardIncident["status"] {
+  switch (readString(value).toLowerCase()) {
+    case "closed":
+    case "resolved":
+      return "resolved";
+    case "falsepositivecancelled":
+    case "false_positive_cancelled":
+    case "cancelled":
+      return "cancelled";
+    default:
+      return "active";
+  }
+}
+
+function normalizeAdminSeverity(value: unknown): DashboardIncident["severity"] {
+  switch (readString(value).toLowerCase()) {
+    case "critical":
+      return "critical";
+    case "high":
+      return "high";
+    case "low":
+      return "low";
+    default:
+      return "medium";
+  }
+}
+
+function toAdminDashboardIncident(item: Record<string, unknown>): DashboardIncident | null {
+  const incidentId = readString(item.incidentId, readString(item.id));
+
+  if (!incidentId) {
+    return null;
+  }
+
+  const occurredAt = readString(item.occurredAtUtc, readString(item.createdAtUtc, new Date().toISOString()));
+  const elapsedMinutes = Math.max(Math.floor((Date.now() - new Date(occurredAt).getTime()) / 60000), 0);
+
+  return {
+    id: incidentId,
+    folio: incidentId,
+    tripId: readString(item.tripId) || null,
+    alertDispatchId: null,
+    notificationDeliveryAttemptId: null,
+    driverName: "Usuario MotoSOS",
+    vehicleAlias: "Vehículo registrado",
+    vehicleDescription: "Detalle restringido para administración",
+    licensePlateMasked: "Protegida",
+    incidentType: readString(item.cause, "Incidente"),
+    status: normalizeAdminStatus(item.status),
+    severity: normalizeAdminSeverity(item.riskLevel),
+    occurredAt,
+    locationLabel: "Ubicación protegida",
+    coordinates: { latitude: 19.4326, longitude: -99.1332 },
+    elapsedMinutes,
+    batteryLevel: null,
+    signalStatus: "medium",
+  };
+}
+
+function readNestedNumber(source: unknown, path: string[], fallback = 0): number {
+  let cursor = source;
+
+  for (const key of path) {
+    if (!isRecord(cursor)) {
+      return fallback;
+    }
+
+    cursor = cursor[key];
+  }
+
+  return typeof cursor === "number" && Number.isFinite(cursor) ? cursor : fallback;
+}
+
+function calculateAdminMetrics(summary: unknown, incidents: DashboardIncident[]): DashboardMetric[] {
+  const open = readNestedNumber(summary, ["incidents", "open"], incidents.filter((incident) => incident.status === "active").length);
+  const closed = readNestedNumber(summary, ["incidents", "closed"], incidents.filter((incident) => incident.status === "resolved").length);
+  const alertsPending = readNestedNumber(summary, ["alerts", "pendingDispatch"]);
+  const critical = incidents.filter((incident) => incident.severity === "critical" || incident.severity === "high").length;
+
+  return [
+    { id: "active", label: "Incidentes abiertos", value: open, comparisonText: "Casos operativos", trend: "neutral" },
+    { id: "in_progress", label: "Alertas pendientes", value: alertsPending, comparisonText: "Dispatch pendiente", trend: "neutral" },
+    { id: "resolved", label: "Cerrados", value: closed, comparisonText: "Histórico operativo", trend: "neutral" },
+    { id: "critical", label: "Prioridad alta", value: critical, comparisonText: "Riesgo alto o crítico", trend: "neutral" },
+  ];
 }
 
 function calculateDashboardMetrics(incidents: DashboardIncident[]): DashboardMetric[] {

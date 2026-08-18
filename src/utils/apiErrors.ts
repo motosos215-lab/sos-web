@@ -48,6 +48,14 @@ function messageForCode(code: string): string {
       return "No fue posible validar la sesión";
     case "missing_config":
       return "La aplicación no tiene configurada la dirección del servicio";
+    case "evidence_upload_conflict":
+      return "Ya existe una evidencia con ese identificador, pero el archivo no coincide.";
+    case "evidence_file_not_available":
+      return "El archivo de evidencia no está disponible para descarga.";
+    case "location_not_available":
+      return "La ubicación de esta emergencia no está disponible.";
+    case "emergency_status_not_available":
+      return "El estado de esta emergencia no está disponible.";
     default:
       return "";
   }

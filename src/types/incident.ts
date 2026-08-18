@@ -79,6 +79,7 @@ export interface IncidentClosure {
 export interface IncidentRecord {
   id: string;
   folio: string;
+  tripId: string | null;
   ownerUserId: string;
   driver: IncidentDriverSummary;
   vehicle: IncidentVehicleSummary;
