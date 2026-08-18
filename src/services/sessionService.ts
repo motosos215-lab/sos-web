@@ -40,6 +40,7 @@ export interface SimulatedSession {
 
 const LEGACY_SESSION_KEY = "motosos.simulatedSession";
 const CURRENT_USER_KEY = "motosos.currentUserId";
+const sessionsByUserId = new Map<string, SimulatedSession>();
 
 function setupKeyFor(userId: string): string {
   return `motosos.setup.${userId}`;
@@ -115,8 +116,6 @@ function parseSession(value: string): SimulatedSession | null {
 
     if (
       typeof parsed.userId !== "string" ||
-      typeof parsed.name !== "string" ||
-      typeof parsed.email !== "string" ||
       !isUserRole(parsed.role) ||
       typeof parsed.setupCompleted !== "boolean" ||
       !isSetupStepKey(parsed.currentSetupStep)
@@ -126,8 +125,8 @@ function parseSession(value: string): SimulatedSession | null {
 
     return {
       userId: parsed.userId,
-      name: parsed.name,
-      email: parsed.email,
+      name: typeof parsed.name === "string" ? parsed.name : "Usuario MotoSOS",
+      email: typeof parsed.email === "string" ? parsed.email : "",
       role: parsed.role,
       accountStatus: isAccountStatus(parsed.accountStatus) ? parsed.accountStatus : parsed.setupCompleted ? "active" : "pending",
       setupCompleted: parsed.setupCompleted,
@@ -167,8 +166,34 @@ function parseSession(value: string): SimulatedSession | null {
   }
 }
 
+function toStoredSession(session: SimulatedSession): Partial<SimulatedSession> {
+  return {
+    userId: session.userId,
+    role: session.role,
+    accountStatus: session.accountStatus,
+    setupCompleted: session.setupCompleted,
+    registrationStatus: session.registrationStatus,
+    setupCompletedAt: session.setupCompletedAt,
+    currentSetupStep: session.currentSetupStep,
+    plan: session.plan,
+    planStatus: session.planStatus,
+    licenseType: session.licenseType,
+    contactLimit: session.contactLimit,
+    vehicleLimit: session.vehicleLimit,
+    driverLimit: session.driverLimit,
+    planConfigured: session.planConfigured,
+    planActivatedAt: session.planActivatedAt,
+    vehicleRegistered: session.vehicleRegistered,
+    devicesConfigured: session.devicesConfigured,
+    mobileDeviceLinked: session.mobileDeviceLinked,
+    smartwatchLinked: session.smartwatchLinked,
+    onboardingStatusSnapshot: session.onboardingStatusSnapshot,
+  };
+}
+
 export function saveSession(session: SimulatedSession) {
-  window.sessionStorage.setItem(setupKeyFor(session.userId), JSON.stringify(session));
+  sessionsByUserId.set(session.userId, session);
+  window.sessionStorage.setItem(setupKeyFor(session.userId), JSON.stringify(toStoredSession(session)));
   window.sessionStorage.setItem(CURRENT_USER_KEY, session.userId);
   window.sessionStorage.removeItem(LEGACY_SESSION_KEY);
 }
@@ -200,6 +225,10 @@ export function getSession(): SimulatedSession | null {
 
   const storedSession = window.sessionStorage.getItem(setupKeyFor(currentUserId));
 
+  if (sessionsByUserId.has(currentUserId)) {
+    return sessionsByUserId.get(currentUserId) ?? null;
+  }
+
   if (!storedSession) {
     return migrateLegacySession();
   }
@@ -213,6 +242,10 @@ export function getSessionForUser(userId: string): SimulatedSession | null {
   }
 
   const storedSession = window.sessionStorage.getItem(setupKeyFor(userId));
+
+  if (sessionsByUserId.has(userId)) {
+    return sessionsByUserId.get(userId) ?? null;
+  }
 
   return storedSession ? parseSession(storedSession) : null;
 }
@@ -233,6 +266,7 @@ export function clearSession() {
   const currentUserId = getActiveUserId();
 
   if (currentUserId) {
+    sessionsByUserId.delete(currentUserId);
     window.sessionStorage.removeItem(CURRENT_USER_KEY);
   }
 

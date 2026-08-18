@@ -4,6 +4,8 @@ function contactsKeyFor(userId: string): string {
   return `motosos.contacts.${userId}`;
 }
 
+const contactsByUserId = new Map<string, EmergencyContact[]>();
+
 function resolveUserId(userId?: string): string | null {
   const resolved = userId ?? window.sessionStorage.getItem("motosos.currentUserId");
 
@@ -78,13 +80,7 @@ export function getStoredEmergencyContacts(userId?: string): EmergencyContact[] 
     return [];
   }
 
-  const storedContacts = window.sessionStorage.getItem(contactsKeyFor(resolvedUserId));
-
-  if (!storedContacts) {
-    return [];
-  }
-
-  return parseContacts(storedContacts);
+  return contactsByUserId.get(resolvedUserId) ?? parseContacts(window.sessionStorage.getItem(contactsKeyFor(resolvedUserId)) ?? "[]");
 }
 
 export function saveStoredEmergencyContacts(userId: string, contacts: EmergencyContact[]): void;
@@ -94,7 +90,8 @@ export function saveStoredEmergencyContacts(userIdOrContacts: string | Emergency
   const source = typeof userIdOrContacts === "string" ? contacts : userIdOrContacts;
 
   if (userId && source) {
-    window.sessionStorage.setItem(contactsKeyFor(userId), JSON.stringify(source));
+    contactsByUserId.set(userId, source);
+    window.sessionStorage.removeItem(contactsKeyFor(userId));
   }
 }
 
@@ -150,6 +147,7 @@ export function clearStoredEmergencyContacts(userId?: string) {
   const resolvedUserId = resolveUserId(userId);
 
   if (resolvedUserId) {
+    contactsByUserId.delete(resolvedUserId);
     window.sessionStorage.removeItem(contactsKeyFor(resolvedUserId));
   }
 }
