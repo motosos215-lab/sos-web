@@ -54,6 +54,10 @@ function readString(value: unknown, fallback = ""): string {
   return typeof value === "string" && value.trim().length > 0 ? value.trim() : fallback;
 }
 
+function readNumber(value: unknown, fallback = 0): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
+}
+
 function readMonitorAlerts(value: unknown): Record<string, unknown>[] {
   if (!isRecord(value)) {
     return [];
@@ -298,24 +302,13 @@ function toAdminDashboardIncident(item: Record<string, unknown>): DashboardIncid
   };
 }
 
-function readNestedNumber(source: unknown, path: string[], fallback = 0): number {
-  let cursor = source;
-
-  for (const key of path) {
-    if (!isRecord(cursor)) {
-      return fallback;
-    }
-
-    cursor = cursor[key];
-  }
-
-  return typeof cursor === "number" && Number.isFinite(cursor) ? cursor : fallback;
-}
-
 function calculateAdminMetrics(summary: unknown, incidents: DashboardIncident[]): DashboardMetric[] {
-  const open = readNestedNumber(summary, ["incidents", "open"], incidents.filter((incident) => incident.status === "active").length);
-  const closed = readNestedNumber(summary, ["incidents", "closed"], incidents.filter((incident) => incident.status === "resolved").length);
-  const alertsPending = readNestedNumber(summary, ["alerts", "pendingDispatch"]);
+  const summaryRecord = isRecord(summary) ? summary : {};
+  const incidentsSummary = isRecord(summaryRecord.incidents) ? summaryRecord.incidents : {};
+  const alertsSummary = isRecord(summaryRecord.alerts) ? summaryRecord.alerts : {};
+  const open = readNumber(incidentsSummary.open, incidents.filter((incident) => incident.status === "active").length);
+  const closed = readNumber(incidentsSummary.closed, incidents.filter((incident) => incident.status === "resolved").length);
+  const alertsPending = readNumber(alertsSummary.pendingDispatch);
   const critical = incidents.filter((incident) => incident.severity === "critical" || incident.severity === "high").length;
 
   return [
