@@ -22,6 +22,92 @@ import { getApiErrorMessage } from "../utils/apiErrors";
 type IncidentApiRecord = Record<string, unknown>;
 
 const severityRank: Record<IncidentSeverity, number> = { critical: 4, high: 3, medium: 2, low: 1 };
+const SIMULATED_INCIDENT_FOLIO = "DEMO-2026-001";
+
+export function createSimulatedIncident(session: SimulatedSession | null): IncidentRecord {
+  const occurredAt = new Date(Date.now() - 8 * 60 * 1000).toISOString();
+
+  return {
+    id: SIMULATED_INCIDENT_FOLIO,
+    folio: SIMULATED_INCIDENT_FOLIO,
+    ownerUserId: session?.userId ?? "demo-user",
+    driver: {
+      id: session?.userId ?? "demo-user",
+      fullName: session?.name ?? "Juan Pérez",
+      phoneMasked: "******4567",
+      emailMasked: "ju***@correo.com",
+      bloodType: "O+",
+      city: "Pachuca",
+    },
+    vehicle: {
+      id: "demo-vehicle",
+      alias: "Moto diaria",
+      type: "motocicleta",
+      brand: "Italika",
+      model: "FT150",
+      year: 2024,
+      licensePlateMasked: "ABC-***",
+    },
+    device: {
+      mobileBatteryLevel: 82,
+      smartwatchBatteryLevel: 64,
+      signalStatus: "strong",
+      gpsAccuracyMeters: 8,
+      lastSynchronization: occurredAt,
+    },
+    contacts: [
+      {
+        id: "demo-contact",
+        fullName: "María Pérez",
+        relationship: "Madre",
+        phoneMasked: "******4567",
+        invitationStatus: "linked",
+        canReceiveLocation: true,
+        canReceiveCriticalAlerts: true,
+      },
+    ],
+    status: "active",
+    severity: "critical",
+    origin: "manual_sos",
+    incidentType: "Incidente simulado",
+    occurredAt,
+    acknowledgedAt: null,
+    closedAt: null,
+    locationLabel: "Blvd. Felipe Ángeles, Pachuca, Hgo.",
+    coordinates: { latitude: 20.0911, longitude: -98.7624 },
+    estimatedDistanceKm: 2.4,
+    elapsedMinutes: 8,
+    description: "Incidente de demostración para validar el dashboard, mapa, métricas y tabla de alertas.",
+    assignedMonitorName: "Contacto demo",
+    locationSharingAllowed: true,
+    monitorCanClose: false,
+    timeline: [
+      {
+        id: `${SIMULATED_INCIDENT_FOLIO}-created`,
+        actionType: "created",
+        title: "Incidente simulado registrado",
+        description: "MotoSOS generó un incidente de demostración para previsualizar el dashboard.",
+        occurredAt,
+        performedBy: "MotoSOS Demo",
+        performedRole: "System",
+      },
+      {
+        id: `${SIMULATED_INCIDENT_FOLIO}-contacts`,
+        actionType: "contacts_notified",
+        title: "Contacto de emergencia notificado",
+        description: "Se simuló la notificación al contacto principal vinculado.",
+        occurredAt: new Date(Date.now() - 6 * 60 * 1000).toISOString(),
+        performedBy: "MotoSOS Demo",
+        performedRole: "System",
+      },
+    ],
+    closure: null,
+  };
+}
+
+function isSimulatedIncidentId(value: string): boolean {
+  return value.trim().toUpperCase() === SIMULATED_INCIDENT_FOLIO;
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return value != null && typeof value === "object" && !Array.isArray(value);
@@ -300,6 +386,10 @@ export async function getIncidents(
 }
 
 export async function getIncidentById(incidentId: string, session: SimulatedSession | null): Promise<ServiceResult<IncidentRecord>> {
+  if (isSimulatedIncidentId(incidentId)) {
+    return { success: true, message: "Incidente simulado obtenido correctamente", data: createSimulatedIncident(session) };
+  }
+
   try {
     const response = await api.get<ApiResponse<unknown>>(`/api/v1/incidents/${encodeURIComponent(incidentId)}`);
     const incident = toIncidentRecord(readIncidentPayload(unwrap<unknown>(response)) ?? {}, session);

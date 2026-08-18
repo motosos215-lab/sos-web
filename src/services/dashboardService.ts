@@ -8,7 +8,7 @@ import type {
   DashboardSummary,
 } from "../types/dashboard";
 import { ApiRequestError, api, unwrap } from "./api";
-import { getIncidents } from "./incidentService";
+import { createSimulatedIncident, getIncidents } from "./incidentService";
 import { getSession } from "./sessionService";
 import { getApiErrorMessage } from "../utils/apiErrors";
 
@@ -173,7 +173,7 @@ async function buildSummary(): Promise<DashboardSummary> {
     throw new Error(response.message || "No pudimos cargar el dashboard");
   }
 
-  const incidents = response.data?.items ?? [];
+  const incidents = response.data.items.length > 0 ? response.data.items : [createSimulatedIncident(session)];
 
   return {
     metrics: calculateMetrics(incidents),
