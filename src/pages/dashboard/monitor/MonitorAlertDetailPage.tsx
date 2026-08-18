@@ -117,12 +117,13 @@ export function MonitorAlertDetailPage() {
       const result = await uploadEvidence({
         role: "monitor",
         incidentId: alert.incidentId,
+        alertDispatchId: alert.alertDispatchId,
         file: selectedFile,
         description: evidenceDescription,
         evidenceType,
       });
       setUploadedEvidence((current) => [result.evidenceAttachment, ...current.filter((item) => item.id !== result.evidenceAttachment.id)]);
-      setMessage(result.isDuplicate ? "Esta evidencia ya estaba registrada." : "Evidencia enviada correctamente.");
+      setMessage(result.isDuplicate ? "Esta evidencia ya estaba registrada." : "Evidencia registrada correctamente.");
       setSelectedFile(null);
       setEvidenceDescription("");
 
@@ -140,7 +141,7 @@ export function MonitorAlertDetailPage() {
     setErrorMessage("");
 
     try {
-      const file = await downloadEvidence("monitor", item.id, item.fileName);
+      const file = await downloadEvidence("monitor", item.id, item.fileName, item);
       const url = URL.createObjectURL(file.blob);
       const anchor = document.createElement("a");
       anchor.href = url;
@@ -344,7 +345,7 @@ export function MonitorAlertDetailPage() {
         <header>
           <div>
             <h2 id="monitor-evidence-title">Evidencia del monitor</h2>
-            <p>Sube archivos permitidos. La descarga solo se habilita para evidencias subidas en esta sesión.</p>
+            <p>Registra metadatos de archivos permitidos. El backend actual no expone descarga binaria.</p>
           </div>
         </header>
         <div className="incident-evidence__upload">
@@ -362,15 +363,15 @@ export function MonitorAlertDetailPage() {
             <select onChange={(event) => setEvidenceType(event.target.value)} value={evidenceType}>
               <option value="Photo">Foto</option>
               <option value="Document">Documento</option>
-              <option value="Text">Texto</option>
+              <option value="Other">Otro</option>
             </select>
           </label>
           <label>
             Descripción
             <textarea maxLength={1000} onChange={(event) => setEvidenceDescription(event.target.value)} value={evidenceDescription} />
           </label>
-          <Button disabled={!selectedFile} isLoading={isUploading} loadingText="Subiendo..." onClick={handleUpload} type="button">
-            <FileUp aria-hidden="true" size={16} /> Subir evidencia
+          <Button disabled={!selectedFile} isLoading={isUploading} loadingText="Registrando..." onClick={handleUpload} type="button">
+            <FileUp aria-hidden="true" size={16} /> Registrar evidencia
           </Button>
         </div>
         <div className="incident-evidence__list">
@@ -384,7 +385,7 @@ export function MonitorAlertDetailPage() {
                 </span>
               </div>
               <Button onClick={() => void handleDownload(item)} type="button" variant="secondary">
-                <Download aria-hidden="true" size={16} /> Descargar
+                <Download aria-hidden="true" size={16} /> Descargar ficha
               </Button>
             </article>
           ))}

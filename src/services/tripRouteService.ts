@@ -1,5 +1,3 @@
-import type { ApiResponse } from "../types/auth";
-import { api, unwrap } from "./api";
 import { SIMULATED_TRIP_ID } from "./incidentService";
 
 export interface TripRoutePoint {
@@ -20,60 +18,6 @@ export interface TripRouteSummary {
   totalPoints: number;
   returnedPoints: number;
   points: TripRoutePoint[];
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value != null && typeof value === "object" && !Array.isArray(value);
-}
-
-function readString(value: unknown, fallback = ""): string {
-  return typeof value === "string" && value.trim().length > 0 ? value.trim() : fallback;
-}
-
-function readNumber(value: unknown, fallback = 0): number {
-  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
-}
-
-function readNullableNumber(value: unknown): number | null {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
-}
-
-function readPoint(value: unknown): TripRoutePoint | null {
-  if (!isRecord(value)) {
-    return null;
-  }
-
-  const latitude = readNumber(value.latitude, Number.NaN);
-  const longitude = readNumber(value.longitude, Number.NaN);
-
-  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
-    return null;
-  }
-
-  return {
-    id: readString(value.id, readString(value.clientRoutePointId, "route-point")),
-    clientRoutePointId: readString(value.clientRoutePointId),
-    sequence: readNumber(value.sequence),
-    recordedAtUtc: readString(value.recordedAtUtc, new Date().toISOString()),
-    latitude,
-    longitude,
-    accuracyMeters: readNumber(value.accuracyMeters),
-    speedMetersPerSecond: readNullableNumber(value.speedMetersPerSecond),
-    bearingDegrees: readNullableNumber(value.bearingDegrees),
-  };
-}
-
-function readRoute(value: unknown, tripId: string): TripRouteSummary {
-  const source = isRecord(value) ? value : {};
-  const points = Array.isArray(source.points) ? source.points.map(readPoint).filter((item): item is TripRoutePoint => Boolean(item)) : [];
-
-  return {
-    tripId: readString(source.tripId, tripId),
-    mode: readString(source.mode, "preview"),
-    totalPoints: readNumber(source.totalPoints, points.length),
-    returnedPoints: readNumber(source.returnedPoints, points.length),
-    points,
-  };
 }
 
 function createDemoRoute(): TripRouteSummary {
@@ -107,13 +51,21 @@ function createDemoRoute(): TripRouteSummary {
   };
 }
 
+function createUnavailableRoute(tripId: string): TripRouteSummary {
+  return {
+    tripId,
+    mode: "unavailable",
+    totalPoints: 0,
+    returnedPoints: 0,
+    points: [],
+  };
+}
+
 export async function getTripRoutePreview(tripId: string, maxPoints = 50): Promise<TripRouteSummary> {
   if (tripId === SIMULATED_TRIP_ID) {
     return createDemoRoute();
   }
 
-  const response = await api.get<ApiResponse<unknown>>(`/api/v1/trips/${encodeURIComponent(tripId)}/route`, {
-    params: { mode: "preview", maxPoints },
-  });
-  return readRoute(unwrap<unknown>(response), tripId);
+  void maxPoints;
+  return createUnavailableRoute(tripId);
 }

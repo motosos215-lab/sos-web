@@ -14,6 +14,14 @@ describe("demo integrations", () => {
     expect(route.points[0].sequence).toBe(1);
   });
 
+  it("returns unavailable route metadata for real trips while the backend has no route endpoint", async () => {
+    const route = await getTripRoutePreview("real-trip-id");
+
+    expect(route.tripId).toBe("real-trip-id");
+    expect(route.mode).toBe("unavailable");
+    expect(route.points).toHaveLength(0);
+  });
+
   it("returns downloadable demo evidence for the simulated incident", async () => {
     const evidence = await listRiderEvidenceByIncident(SIMULATED_INCIDENT_FOLIO);
     const download = await downloadEvidence("rider", evidence[0].id, evidence[0].fileName);
@@ -21,6 +29,30 @@ describe("demo integrations", () => {
     expect(evidence).toHaveLength(1);
     expect(download.fileName).toContain(".txt");
     expect(download.contentType).toBe("text/plain");
+  });
+
+  it("returns metadata downloads for backend evidence records", async () => {
+    const download = await downloadEvidence("rider", "evidence-id", "photo.jpg", {
+      id: "evidence-id",
+      incidentId: "incident-id",
+      alertDispatchId: null,
+      emergencyResolutionReportId: null,
+      tripId: "trip-id",
+      registeredByRole: "Rider",
+      evidenceType: "Photo",
+      source: "RiderMobileApp",
+      status: "Registered",
+      fileName: "photo.jpg",
+      contentType: "image/jpeg",
+      sizeBytes: 1234,
+      sha256Hash: null,
+      description: null,
+      capturedAtUtc: new Date().toISOString(),
+      registeredAtUtc: new Date().toISOString(),
+    });
+
+    expect(download.fileName).toBe("photo.jpg.metadata.json");
+    expect(download.contentType).toBe("application/json");
   });
 
   it("formats file sizes safely", () => {

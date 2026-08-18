@@ -1,4 +1,3 @@
-import type { AxiosResponseHeaders, RawAxiosResponseHeaders } from "axios";
 import type { ApiResponse } from "../types/auth";
 import { api, unwrap } from "./api";
 import { SIMULATED_INCIDENT_FOLIO } from "./incidentService";
@@ -7,6 +6,7 @@ const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 const ALLOWED_CONTENT_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "application/pdf", "text/plain"]);
 const ALLOWED_EXTENSIONS = new Set(["jpg", "jpeg", "png", "webp", "pdf", "txt"]);
 const DEMO_MONITOR_INCIDENT_ID = "DEMO-MONITOR-INCIDENT-001";
+const DEMO_MONITOR_DISPATCH_ID = "DEMO-MONITOR-DISPATCH-001";
 
 export type EvidenceActorRole = "rider" | "monitor" | "admin";
 
@@ -43,6 +43,8 @@ export interface EvidenceDownload {
 export interface UploadEvidenceInput {
   role: Extract<EvidenceActorRole, "rider" | "monitor">;
   incidentId: string;
+  alertDispatchId?: string | null;
+  emergencyResolutionReportId?: string | null;
   file: File;
   description?: string;
   evidenceType?: string;
@@ -129,27 +131,41 @@ function makeEvidenceBasePath(role: EvidenceActorRole): string {
   return `/api/v1/${role}/evidence-attachments`;
 }
 
-function headerValue(headers: RawAxiosResponseHeaders | AxiosResponseHeaders, name: string): string {
-  const value = headers[name] ?? headers[name.toLowerCase()];
-  return typeof value === "string" ? value : Array.isArray(value) ? value.join(",") : "";
-}
-
-function readDownloadFileName(headers: RawAxiosResponseHeaders | AxiosResponseHeaders, fallback: string): string {
-  const disposition = headerValue(headers, "content-disposition");
-  const match = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(disposition);
-  const decoded = (() => {
-    try {
-      return match?.[1] ? decodeURIComponent(match[1]) : "";
-    } catch {
-      return "";
-    }
-  })();
-
-  return decoded.replace(/[\\/]/g, "").trim() || fallback;
-}
-
 function isDemoIncident(incidentId: string): boolean {
   return incidentId === SIMULATED_INCIDENT_FOLIO || incidentId === DEMO_MONITOR_INCIDENT_ID;
+}
+
+function createClientEvidenceId(): string {
+  return typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
+}
+
+function safeFileName(name: string): string {
+  const withoutSeparators = name.replace(/[\\/]/g, "-");
+  const withoutControlChars = [...withoutSeparators].filter((char) => {
+    const code = char.charCodeAt(0);
+    return code > 31 && code !== 127;
+  });
+  const sanitized = withoutControlChars.join("").replace(/\.\./g, ".").trim();
+  return sanitized || "evidence";
+}
+
+function normalizeEvidenceType(evidenceType: string): string {
+  return ["Photo", "Video", "Audio", "Document", "SensorSnapshot", "AppScreenshot", "Other"].includes(evidenceType)
+    ? evidenceType
+    : "Other";
+}
+
+async function calculateSha256(file: File): Promise<string | null> {
+  if (typeof crypto === "undefined" || !crypto.subtle) {
+    return null;
+  }
+
+  try {
+    const hash = await crypto.subtle.digest("SHA-256", await file.arrayBuffer());
+    return [...new Uint8Array(hash)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+  } catch {
+    return null;
+  }
 }
 
 function createDemoEvidence(incidentId = SIMULATED_INCIDENT_FOLIO): EvidenceAttachment[] {
@@ -159,13 +175,13 @@ function createDemoEvidence(incidentId = SIMULATED_INCIDENT_FOLIO): EvidenceAtta
     {
       id: incidentId === SIMULATED_INCIDENT_FOLIO ? "demo-evidence-photo" : "demo-monitor-evidence-note",
       incidentId,
-      alertDispatchId: incidentId === SIMULATED_INCIDENT_FOLIO ? null : "DEMO-MONITOR-DISPATCH-001",
+      alertDispatchId: incidentId === SIMULATED_INCIDENT_FOLIO ? null : DEMO_MONITOR_DISPATCH_ID,
       emergencyResolutionReportId: null,
       tripId: incidentId === SIMULATED_INCIDENT_FOLIO ? "demo-trip" : "demo-monitor-trip",
       registeredByRole: incidentId === SIMULATED_INCIDENT_FOLIO ? "Rider" : "Monitor",
-      evidenceType: incidentId === SIMULATED_INCIDENT_FOLIO ? "Photo" : "Text",
+      evidenceType: incidentId === SIMULATED_INCIDENT_FOLIO ? "Photo" : "Other",
       source: "MotoSOS Demo",
-      status: "Uploaded",
+      status: "Registered",
       fileName: incidentId === SIMULATED_INCIDENT_FOLIO ? "foto-incidente-demo.txt" : "nota-monitor-demo.txt",
       contentType: "text/plain",
       sizeBytes: 196,
@@ -180,16 +196,16 @@ function createDemoEvidence(incidentId = SIMULATED_INCIDENT_FOLIO): EvidenceAtta
 function createDemoUpload(input: UploadEvidenceInput): EvidenceUploadResult {
   const now = new Date().toISOString();
   const evidenceAttachment: EvidenceAttachment = {
-    id: `demo-upload-${crypto.randomUUID()}`,
+    id: `demo-upload-${createClientEvidenceId()}`,
     incidentId: input.incidentId,
-    alertDispatchId: input.role === "monitor" ? "DEMO-MONITOR-DISPATCH-001" : null,
+    alertDispatchId: input.role === "monitor" ? (input.alertDispatchId ?? DEMO_MONITOR_DISPATCH_ID) : null,
     emergencyResolutionReportId: null,
     tripId: input.incidentId === SIMULATED_INCIDENT_FOLIO ? "demo-trip" : "demo-monitor-trip",
     registeredByRole: input.role === "monitor" ? "Monitor" : "Rider",
-    evidenceType: input.evidenceType ?? "Photo",
+    evidenceType: normalizeEvidenceType(input.evidenceType ?? "Photo"),
     source: "MotoSOS Web Demo",
-    status: "Uploaded",
-    fileName: input.file.name,
+    status: "Registered",
+    fileName: safeFileName(input.file.name),
     contentType: input.file.type,
     sizeBytes: input.file.size,
     sha256Hash: null,
@@ -215,6 +231,24 @@ function createDemoDownload(evidenceId: string, fallbackFileName: string): Evide
   };
 }
 
+function createEvidenceMetadataDownload(evidence: EvidenceAttachment, role: EvidenceActorRole): EvidenceDownload {
+  const body = JSON.stringify(
+    {
+      note: "El backend actual registra metadatos de evidencia; no almacena ni expone binarios desde la API.",
+      role,
+      evidence,
+    },
+    null,
+    2,
+  );
+
+  return {
+    blob: new Blob([body], { type: "application/json" }),
+    fileName: `${safeFileName(evidence.fileName)}.metadata.json`,
+    contentType: "application/json",
+  };
+}
+
 export async function listRiderEvidenceByIncident(incidentId: string): Promise<EvidenceAttachment[]> {
   if (isDemoIncident(incidentId)) {
     return createDemoEvidence(incidentId);
@@ -227,7 +261,9 @@ export async function listRiderEvidenceByIncident(incidentId: string): Promise<E
 }
 
 export async function uploadEvidence({
+  alertDispatchId,
   description,
+  emergencyResolutionReportId,
   evidenceType = "Photo",
   file,
   incidentId,
@@ -236,20 +272,31 @@ export async function uploadEvidence({
   assertSafeUploadFile(file);
 
   if (isDemoIncident(incidentId)) {
-    return createDemoUpload({ description, evidenceType, file, incidentId, role });
+    return createDemoUpload({ alertDispatchId, description, emergencyResolutionReportId, evidenceType, file, incidentId, role });
   }
 
-  const form = new FormData();
-  form.append("file", file);
-  form.append("incidentId", incidentId);
-  form.append("evidenceType", evidenceType);
-  form.append("clientEvidenceId", crypto.randomUUID());
-
-  if (description?.trim()) {
-    form.append("description", description.trim().slice(0, 1000));
-  }
-
-  const response = await api.post<ApiResponse<unknown>>(`${makeEvidenceBasePath(role)}/upload`, form);
+  const target = emergencyResolutionReportId?.trim()
+    ? { emergencyResolutionReportId: emergencyResolutionReportId.trim() }
+    : alertDispatchId?.trim()
+      ? { alertDispatchId: alertDispatchId.trim() }
+      : { incidentId };
+  const response = await api.post<ApiResponse<unknown>>(makeEvidenceBasePath(role), {
+    ...target,
+    clientEvidenceId: createClientEvidenceId(),
+    evidenceType: normalizeEvidenceType(evidenceType),
+    source: role === "monitor" ? "MonitorMobileApp" : "RiderMobileApp",
+    fileName: safeFileName(file.name),
+    contentType: file.type || "application/octet-stream",
+    sizeBytes: file.size,
+    sha256Hash: await calculateSha256(file),
+    clientStorageReference: "web-local-file-selected",
+    storageProvider: "None",
+    description: description?.trim().slice(0, 1000) || null,
+    capturedAtUtc: new Date(file.lastModified || Date.now()).toISOString(),
+    metadata: {
+      webUploadMode: "metadata-only",
+    },
+  });
   const data = unwrap<unknown>(response);
   const source = isRecord(data) ? data : {};
   const evidence = readEvidence(source.evidenceAttachment);
@@ -265,20 +312,24 @@ export async function downloadEvidence(
   role: EvidenceActorRole,
   evidenceId: string,
   fallbackFileName = "evidence",
+  evidence?: EvidenceAttachment,
 ): Promise<EvidenceDownload> {
   if (evidenceId.startsWith("demo-")) {
     return createDemoDownload(evidenceId, fallbackFileName);
   }
 
-  const response = await api.get<Blob>(`${makeEvidenceBasePath(role)}/${encodeURIComponent(evidenceId)}/download`, {
-    responseType: "blob",
-  });
-  const contentType = headerValue(response.headers, "content-type") || response.data.type || "application/octet-stream";
-  return {
-    blob: response.data,
-    fileName: readDownloadFileName(response.headers, fallbackFileName),
-    contentType,
-  };
+  if (evidence) {
+    return createEvidenceMetadataDownload(evidence, role);
+  }
+
+  const response = await api.get<ApiResponse<unknown>>(`${makeEvidenceBasePath(role)}/${encodeURIComponent(evidenceId)}`);
+  const item = readEvidence(unwrap<unknown>(response));
+
+  if (!item) {
+    throw new Error("No pudimos leer la evidencia devuelta por MotoSOS.");
+  }
+
+  return createEvidenceMetadataDownload(item, role);
 }
 
 export function formatFileSize(bytes: number): string {

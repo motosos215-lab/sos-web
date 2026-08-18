@@ -247,7 +247,7 @@ export function IncidentDetailPage() {
         evidenceType,
       });
       setEvidenceItems((current) => [result.evidenceAttachment, ...current.filter((item) => item.id !== result.evidenceAttachment.id)]);
-      setEvidenceMessage(result.isDuplicate ? "Esta evidencia ya estaba registrada." : "Evidencia subida correctamente.");
+      setEvidenceMessage(result.isDuplicate ? "Esta evidencia ya estaba registrada." : "Evidencia registrada correctamente.");
       setSelectedEvidenceFile(null);
       setEvidenceDescription("");
 
@@ -265,7 +265,7 @@ export function IncidentDetailPage() {
     setErrorMessage("");
 
     try {
-      const download = await downloadEvidence("rider", item.id, item.fileName);
+      const download = await downloadEvidence("rider", item.id, item.fileName, item);
       const url = URL.createObjectURL(download.blob);
       const anchor = document.createElement("a");
       anchor.href = url;
@@ -663,7 +663,7 @@ export function IncidentDetailPage() {
         <header>
           <div>
             <h2 id="incident-evidence-title">Evidencias</h2>
-            <p>Archivos protegidos por permisos del backend. MotoSOS no expone URLs públicas de storage.</p>
+            <p>Metadatos protegidos por permisos del backend. MotoSOS no expone URLs públicas de storage.</p>
           </div>
         </header>
         {evidenceMessage ? (
@@ -684,7 +684,7 @@ export function IncidentDetailPage() {
             <select onChange={(event) => setEvidenceType(event.target.value)} value={evidenceType}>
               <option value="Photo">Foto</option>
               <option value="Document">Documento</option>
-              <option value="Text">Texto</option>
+              <option value="Other">Otro</option>
             </select>
           </label>
           <label>
@@ -699,11 +699,11 @@ export function IncidentDetailPage() {
           <Button
             disabled={!selectedEvidenceFile}
             isLoading={isEvidenceUploading}
-            loadingText="Subiendo..."
+            loadingText="Registrando..."
             onClick={handleEvidenceUpload}
             type="button"
           >
-            <FileUp aria-hidden="true" size={16} /> Subir evidencia
+            <FileUp aria-hidden="true" size={16} /> Registrar evidencia
           </Button>
         </div>
         <div className="incident-evidence__list" aria-busy={isEvidenceLoading}>
@@ -719,7 +719,7 @@ export function IncidentDetailPage() {
                 {item.description ? <p>{item.description}</p> : null}
               </div>
               <Button onClick={() => void handleEvidenceDownload(item)} type="button" variant="secondary">
-                <Download aria-hidden="true" size={16} /> Descargar
+                <Download aria-hidden="true" size={16} /> Descargar ficha
               </Button>
             </article>
           ))}
