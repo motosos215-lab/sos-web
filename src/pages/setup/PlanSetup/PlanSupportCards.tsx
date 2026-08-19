@@ -49,10 +49,7 @@ export function PaymentInformationCard({ onContinueBasic, onOpenUpgrade }: Payme
       </div>
       <div className="plan-notice__payment-body">
         <h2 id="payment-info-title">Gestiona tu plan desde la app</h2>
-        <p>
-          Las compras y mejoras de planes individuales se realizan desde la aplicación móvil MotoSOS mediante Google
-          Play.
-        </p>
+        <p>Las compras y mejoras de planes individuales se realizan desde la aplicación móvil MotoSOS mediante Google Play.</p>
         <p className="plan-notice__payment-note">
           <Info aria-hidden="true" size={15} />
           Este portal no solicita datos bancarios.
@@ -81,7 +78,11 @@ export function BusinessLicenseNotice({ isLoading, message, onRequestInformation
         <h2 id="business-license-title">Licenciamiento empresarial</h2>
       </div>
       <p>Las licencias empresariales o institucionales son administradas por un responsable autorizado.</p>
-      {message ? <p className="plan-notice__message" aria-live="polite">{message}</p> : null}
+      {message ? (
+        <p className="plan-notice__message" aria-live="polite">
+          {message}
+        </p>
+      ) : null}
       <div className="plan-notice__actions">
         <Button isLoading={isLoading} loadingText="Solicitando..." onClick={onRequestInformation} type="button" variant="secondary">
           Solicitar información

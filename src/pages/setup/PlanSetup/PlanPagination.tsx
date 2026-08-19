@@ -57,9 +57,20 @@ export function PlanPagination({ plans, currentPlanId, onUpgrade, upgradeLoading
           </span>
           <h3 className="plan-pager__name">{plan.name}</h3>
         </div>
-        <div aria-label="Progreso de planes" className="plan-pager__progress" role="progressbar" aria-valuemax={totalPages} aria-valuemin={1} aria-valuenow={safeIndex + 1}>
+        <div
+          aria-label="Progreso de planes"
+          className="plan-pager__progress"
+          role="progressbar"
+          aria-valuemax={totalPages}
+          aria-valuemin={1}
+          aria-valuenow={safeIndex + 1}
+        >
           {plans.map((item, index) => (
-            <span aria-hidden="true" className={`plan-pager__segment ${index === safeIndex ? "plan-pager__segment--active" : ""}`.trim()} key={item.id} />
+            <span
+              aria-hidden="true"
+              className={`plan-pager__segment ${index === safeIndex ? "plan-pager__segment--active" : ""}`.trim()}
+              key={item.id}
+            />
           ))}
         </div>
       </header>
@@ -76,13 +87,7 @@ export function PlanPagination({ plans, currentPlanId, onUpgrade, upgradeLoading
       </div>
 
       <div className="plan-pager__nav">
-        <button
-          aria-disabled={isFirst}
-          className="plan-pager__btn"
-          disabled={isFirst}
-          onClick={goPrevious}
-          type="button"
-        >
+        <button aria-disabled={isFirst} className="plan-pager__btn" disabled={isFirst} onClick={goPrevious} type="button">
           <ChevronLeft aria-hidden="true" size={18} />
           Plan anterior
         </button>
@@ -102,13 +107,7 @@ export function PlanPagination({ plans, currentPlanId, onUpgrade, upgradeLoading
           ))}
         </div>
 
-        <button
-          aria-disabled={isLast}
-          className="plan-pager__btn"
-          disabled={isLast}
-          onClick={goNext}
-          type="button"
-        >
+        <button aria-disabled={isLast} className="plan-pager__btn" disabled={isLast} onClick={goNext} type="button">
           Siguiente plan
           <ChevronRight aria-hidden="true" size={18} />
         </button>

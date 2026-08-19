@@ -1,46 +1,38 @@
-# GitHub Rulesets
+# GitHub Branch Protection
 
-Este archivo documenta una configuracion recomendada. No activa reglas automaticamente.
+Este archivo documenta la proteccion activa de ramas configurada en GitHub para `main` y `develop`.
 
-## Proteccion Recomendada Para `main`
+## Proteccion Activa Para `main` Y `develop`
 
 - Requerir pull request antes de mergear.
 - Requerir al menos una aprobacion.
 - Requerir que conversaciones sean resueltas.
 - Requerir status checks antes de mergear.
+- Requerir que la rama este actualizada antes del merge.
 - Bloquear force push.
 - Bloquear eliminacion de rama.
-- Requerir que ramas esten actualizadas antes del merge si el flujo del equipo lo permite.
 
-## Status Checks Recomendados Para `main`
+## Status Checks Obligatorios
 
-- `Frontend CI / Build`
-- `CodeQL / Analyze`
-- `Semgrep / Scan`
-- `Dependency Review / Dependency Review` para pull requests.
+- `Frontend CI`
+- `npm audit`
+- `Dependency Review`
+- `Scan`
+- `Analyze`
+- `CodeQL`
+- `netlify/motosos/deploy-preview`
 
-## Status Checks Recomendados Para `develop`
-
-- `Frontend CI / Build`
-- `CodeQL / Analyze`
-- `Semgrep / Scan`
-
-## Frontend Security Durante El Bloqueo
+## Frontend Security
 
 `Frontend Security / npm audit` debe ejecutarse en todos los pull requests hacia `main` y `develop`.
 
-Actualmente reportara fallo por el advisory conocido de `react-router`. No convertir `Frontend Security` en required check mientras su fallo conocido haga imposible integrar cualquier pull request.
-
-No debe agregarse como required check hasta que exista una version segura y compatible, el advisory sea corregido o el equipo apruebe formalmente una excepcion temporal documentada.
-
-Cuando el bloqueo se resuelva:
-
-- Agregar `Frontend Security / npm audit` como required check en `protect-main`.
-- Agregar `Frontend Security / npm audit` como required check en `protect-develop`.
-- Cerrar `FE-SEC-001` en `docs/security-risk-register.md`.
-- Actualizar `docs/ci-cd.md`.
+Actualmente `npm audit --audit-level=high` pasa sin vulnerabilidades reportadas y se mantiene como required check.
 
 Los nombres exactos pueden variar en GitHub segun como renderice cada workflow. Confirmarlos desde un pull request real antes de marcar checks como obligatorios.
+
+## Dependabot
+
+`.github/dependabot.yml` configura revisiones semanales para npm y GitHub Actions. Dependabot alerts y security updates estan habilitados en la configuracion del repositorio.
 
 ## CODEOWNERS
 

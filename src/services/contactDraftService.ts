@@ -1,5 +1,7 @@
 import type { EmergencyContactDraft } from "../types/contact";
 
+const draftsByUserId = new Map<string, EmergencyContactDraft>();
+
 function contactDraftKeyFor(userId: string): string {
   return `motosos.contactDraft.${userId}`;
 }
@@ -10,39 +12,6 @@ function resolveUserId(userId?: string): string | null {
   return resolved && resolved.length > 0 ? resolved : null;
 }
 
-function isContactDraft(value: unknown): value is EmergencyContactDraft {
-  if (!value || typeof value !== "object") {
-    return false;
-  }
-
-  const draft = value as Partial<EmergencyContactDraft>;
-  const permissions = draft.permissions;
-
-  return (
-    typeof draft.fullName === "string" &&
-    typeof draft.relationship === "string" &&
-    typeof draft.customRelationship === "string" &&
-    typeof draft.phone === "string" &&
-    typeof draft.email === "string" &&
-    typeof draft.priority === "string" &&
-    typeof draft.invitationChannel === "string" &&
-    Boolean(permissions) &&
-    typeof permissions?.realTimeLocation === "boolean" &&
-    typeof permissions.criticalAlerts === "boolean" &&
-    typeof permissions.minorIncidents === "boolean" &&
-    typeof permissions.vitalSigns === "boolean"
-  );
-}
-
-function parseDraft(value: string): EmergencyContactDraft | null {
-  try {
-    const parsed = JSON.parse(value) as unknown;
-    return isContactDraft(parsed) ? parsed : null;
-  } catch {
-    return null;
-  }
-}
-
 export function saveEmergencyContactDraft(userId: string, draft: EmergencyContactDraft): void;
 export function saveEmergencyContactDraft(draft: EmergencyContactDraft): void;
 export function saveEmergencyContactDraft(userIdOrDraft: string | EmergencyContactDraft, draft?: EmergencyContactDraft) {
@@ -50,7 +19,8 @@ export function saveEmergencyContactDraft(userIdOrDraft: string | EmergencyConta
   const source = typeof userIdOrDraft === "string" ? draft : userIdOrDraft;
 
   if (userId && source) {
-    window.sessionStorage.setItem(contactDraftKeyFor(userId), JSON.stringify(source));
+    draftsByUserId.set(userId, source);
+    window.sessionStorage.removeItem(contactDraftKeyFor(userId));
   }
 }
 
@@ -61,19 +31,15 @@ export function getEmergencyContactDraft(userId?: string): EmergencyContactDraft
     return null;
   }
 
-  const storedDraft = window.sessionStorage.getItem(contactDraftKeyFor(resolvedUserId));
-
-  if (!storedDraft) {
-    return null;
-  }
-
-  return parseDraft(storedDraft);
+  window.sessionStorage.removeItem(contactDraftKeyFor(resolvedUserId));
+  return draftsByUserId.get(resolvedUserId) ?? null;
 }
 
 export function clearEmergencyContactDraft(userId?: string) {
   const resolvedUserId = resolveUserId(userId);
 
   if (resolvedUserId) {
+    draftsByUserId.delete(resolvedUserId);
     window.sessionStorage.removeItem(contactDraftKeyFor(resolvedUserId));
   }
 }

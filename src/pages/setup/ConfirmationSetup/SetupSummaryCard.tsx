@@ -12,24 +12,13 @@ interface SetupSummaryCardProps {
   icon: LucideIcon;
 }
 
-const STATUS_CONFIG: Record<
-  SetupSummaryStatus,
-  { label: string; Icon: LucideIcon }
-> = {
+const STATUS_CONFIG: Record<SetupSummaryStatus, { label: string; Icon: LucideIcon }> = {
   complete: { label: "Completado", Icon: CheckCircle2 },
   warning: { label: "Recomendación", Icon: AlertTriangle },
   incomplete: { label: "Pendiente", Icon: CircleAlert },
 };
 
-export function SetupSummaryCard({
-  title,
-  status,
-  details,
-  warning,
-  blockingMessage,
-  editPath,
-  icon: Icon,
-}: SetupSummaryCardProps) {
+export function SetupSummaryCard({ title, status, details, warning, blockingMessage, editPath, icon: Icon }: SetupSummaryCardProps) {
   const { label, Icon: StatusIcon } = STATUS_CONFIG[status];
 
   return (

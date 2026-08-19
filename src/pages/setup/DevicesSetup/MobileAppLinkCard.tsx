@@ -13,7 +13,7 @@ interface MobileAppLinkCardProps {
   onExpire: () => void;
   onGenerate: () => void;
   onRegenerate: () => void;
-  onSimulateLink: () => void;
+  onLinkMobileApp: () => void;
 }
 
 export function MobileAppLinkCard({
@@ -27,7 +27,7 @@ export function MobileAppLinkCard({
   onExpire,
   onGenerate,
   onRegenerate,
-  onSimulateLink,
+  onLinkMobileApp,
 }: MobileAppLinkCardProps) {
   const hasLinkedMobileDevice = mobileDevice?.status === "linked";
 
@@ -45,17 +45,18 @@ export function MobileAppLinkCard({
         <ActivationCodePanel
           activationCode={activationCode}
           canUseCode={canUseCode}
+          isGenerating={isGenerating}
           isLinking={isLinking}
           onCopyCode={onCopyCode}
           onCopyLink={onCopyLink}
           onExpire={onExpire}
           onRegenerate={onRegenerate}
-          onSimulateLink={onSimulateLink}
+          onLinkMobileApp={onLinkMobileApp}
         />
       ) : (
         <section className="device-link-card__empty" aria-labelledby="activation-empty-title">
           <h3 id="activation-empty-title">Genera un código para vincular tu aplicación móvil</h3>
-          <p>El código tendrá una vigencia simulada de 10 minutos y podrá usarse desde la app MotoSOS.</p>
+          <p>El código tendrá vigencia temporal y podrá usarse desde la app MotoSOS.</p>
           <Button disabled={isGenerating} isLoading={isGenerating} loadingText="Generando código..." onClick={onGenerate} type="button">
             Generar código de activación
           </Button>

@@ -1,6 +1,6 @@
 .contact-setup {
   display: grid;
-  gap: 1rem;
+  gap: var(--space-4);
   min-width: 0;
 }
 
@@ -13,7 +13,7 @@
   background: var(--color-surface);
   border: 1px solid rgba(208, 213, 221, 0.72);
   border-radius: var(--radius-lg);
-  box-shadow: 0 12px 36px rgba(16, 24, 40, 0.06);
+  box-shadow: var(--shadow-soft);
 }
 
 .contact-setup__header {
@@ -35,7 +35,7 @@
 }
 
 .contact-setup__header p {
-  color: var(--color-primary);
+  color: var(--color-success-dark);
   font-size: 0.9rem;
   font-weight: 900;
 }
@@ -57,8 +57,8 @@
 
 .contact-setup__toolbar {
   display: grid;
-  gap: 0.8rem;
-  padding: 1rem;
+  gap: var(--space-3);
+  padding: var(--space-4);
 }
 
 .contact-setup__toolbar > div,
@@ -81,7 +81,7 @@
 }
 
 .contact-setup__toolbar a {
-  color: var(--color-primary);
+  color: var(--color-success-dark);
   font-weight: 900;
   text-decoration: none;
 }
@@ -97,8 +97,8 @@
 
 .contact-setup__content {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(260px, 340px);
-  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr) minmax(min(100%, 18rem), 21.25rem);
+  gap: var(--space-4);
   min-width: 0;
 }
 
@@ -131,6 +131,8 @@
   gap: 0.55rem;
   margin-top: 1rem;
   min-width: 0;
+  overflow-x: auto;
+  padding-bottom: var(--space-1);
 }
 
 .contacts-table__header,
@@ -139,6 +141,7 @@
   grid-template-columns: minmax(170px, 1.5fr) 110px 130px minmax(170px, 1.3fr) 110px repeat(4, 82px) minmax(180px, 1.1fr);
   gap: 0.55rem;
   align-items: center;
+  min-width: 1180px;
 }
 
 .contacts-table__header {
@@ -151,7 +154,7 @@
 
 .contacts-table__row {
   padding: 0.8rem;
-  background: #fbfdff;
+  background: var(--color-surface-muted);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
 }
@@ -178,7 +181,7 @@
   color: var(--color-surface);
   font-size: 0.88rem;
   font-weight: 900;
-  background: var(--color-primary);
+  background: linear-gradient(135deg, var(--color-success), var(--color-success-dark));
   border-radius: 999px;
 }
 
@@ -191,10 +194,10 @@
   width: max-content;
   margin-top: 0.2rem;
   padding: 0.15rem 0.45rem;
-  color: var(--color-primary);
+  color: var(--color-success-dark);
   font-size: 0.72rem;
   font-weight: 900;
-  background: rgba(25, 75, 204, 0.08);
+  background: rgba(24, 169, 87, 0.1);
   border-radius: 999px;
 }
 
@@ -220,12 +223,20 @@
   border-radius: 999px;
 }
 
-.contact-status--pending { color: var(--color-text-muted); }
-.contact-status--invited { color: var(--color-primary); }
-.contact-status--linked { color: var(--color-success); }
+.contact-status--pending {
+  color: var(--color-text-muted);
+}
+.contact-status--invited {
+  color: var(--color-navy-soft);
+}
+.contact-status--linked {
+  color: var(--color-success);
+}
 .contact-status--rejected,
 .contact-status--expired,
-.contact-status--revoked { color: var(--color-danger); }
+.contact-status--revoked {
+  color: var(--color-danger);
+}
 
 .contact-permission-value--on {
   color: var(--color-success);
@@ -242,8 +253,9 @@
 .contact-actions button,
 .invitation-panel button,
 .contact-modal__header button {
-  padding: 0;
-  color: var(--color-primary);
+  min-height: 2rem;
+  padding: 0.2rem 0;
+  color: var(--color-success-dark);
   font-size: 0.78rem;
   font-weight: 900;
   background: transparent;
@@ -294,8 +306,8 @@
   display: grid;
   gap: 0.75rem;
   padding: 1rem;
-  background: rgba(25, 75, 204, 0.04);
-  border: 1px solid rgba(25, 75, 204, 0.16);
+  background: rgba(24, 169, 87, 0.06);
+  border: 1px solid rgba(24, 169, 87, 0.18);
   border-radius: var(--radius-md);
 }
 
@@ -308,14 +320,14 @@
   display: block;
   padding: 0.8rem;
   overflow-wrap: anywhere;
-  color: var(--color-primary-dark);
+  color: var(--color-navy);
   font-size: 1.1rem;
   font-weight: 900;
   letter-spacing: 0.05em;
   text-align: center;
   user-select: all;
   background: var(--color-surface);
-  border: 1px dashed rgba(25, 75, 204, 0.35);
+  border: 1px dashed rgba(24, 169, 87, 0.45);
   border-radius: var(--radius-md);
 }
 
@@ -351,7 +363,8 @@
   display: grid;
   place-items: center;
   padding: 1rem;
-  background: rgba(6, 38, 83, 0.48);
+  background: rgba(3, 23, 47, 0.58);
+  backdrop-filter: blur(8px);
 }
 
 .contact-modal__dialog,
@@ -383,7 +396,7 @@
 }
 
 .contact-modal__header p {
-  color: var(--color-primary);
+  color: var(--color-success-dark);
   font-size: 0.82rem;
   font-weight: 900;
 }
@@ -416,7 +429,7 @@
 }
 
 .contact-modal__privacy {
-  color: var(--color-primary-dark);
+  color: var(--color-success-dark);
 }
 
 .contact-permissions {
@@ -444,7 +457,7 @@
   gap: 0.8rem;
   align-items: center;
   padding: 0.8rem;
-  background: #fbfdff;
+  background: var(--color-surface-muted);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
 }
@@ -463,7 +476,7 @@
 .contact-permissions__item input {
   width: 42px;
   height: 24px;
-  accent-color: var(--color-primary);
+  accent-color: var(--color-success);
 }
 
 .contact-permissions__state {
@@ -481,7 +494,7 @@
 }
 
 .contact-permissions__message {
-  color: var(--color-primary-dark);
+  color: var(--color-success-dark);
   font-weight: 800;
 }
 
@@ -523,7 +536,7 @@
 .contact-modal button:focus-visible,
 .contact-modal input:focus-visible,
 .contact-modal select:focus-visible {
-  outline: 3px solid rgba(25, 75, 204, 0.28);
+  outline: 3px solid rgba(24, 169, 87, 0.26);
   outline-offset: 3px;
   border-radius: 6px;
 }
@@ -540,6 +553,7 @@
   .contacts-table__row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: start;
+    min-width: 0;
   }
 
   .contacts-table__row [role="cell"]::before {
@@ -581,6 +595,7 @@
 
   .contact-permissions__item {
     grid-template-columns: 1fr;
+    gap: var(--space-2);
   }
 
   .contact-permissions__item input {

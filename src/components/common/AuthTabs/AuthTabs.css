@@ -4,7 +4,8 @@
   gap: 0.35rem;
   padding: 0.28rem;
   margin-bottom: clamp(1rem, 2.5vh, 1.8rem);
-  background: #eef3f8;
+  background: var(--color-background-strong);
+  border: 1px solid rgba(208, 213, 221, 0.6);
   border-radius: 999px;
 }
 
@@ -32,12 +33,12 @@
 }
 
 .auth-tabs__item.active {
-  color: var(--color-primary);
+  color: var(--color-navy);
   background: var(--color-surface);
   box-shadow: 0 8px 22px rgba(16, 24, 40, 0.08);
 }
 
 .auth-tabs__item:focus-visible {
-  outline: 3px solid rgba(25, 75, 204, 0.28);
+  outline: 3px solid rgba(24, 169, 87, 0.26);
   outline-offset: 2px;
 }

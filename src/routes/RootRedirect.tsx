@@ -1,5 +1,5 @@
 import { Navigate } from "react-router-dom";
-import { getSetupStepPath } from "../config/setupSteps";
+import { resolveOnboardingRoute } from "../services/onboardingService";
 import { getAuthTokens } from "../services/authTokenService";
 import { getActiveUserId, getSession } from "../services/sessionService";
 
@@ -13,7 +13,7 @@ export function RootRedirect() {
   }
 
   if (session.role === "conductor" && !session.setupCompleted) {
-    return <Navigate to={getSetupStepPath(session.currentSetupStep)} replace />;
+    return <Navigate to={resolveOnboardingRoute(session.onboardingStatusSnapshot ?? {}, session)} replace />;
   }
 
   return <Navigate to="/dashboard/resumen" replace />;

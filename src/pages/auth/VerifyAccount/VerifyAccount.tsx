@@ -5,6 +5,8 @@ import { AuthTabs } from "../../../components/common/AuthTabs/AuthTabs";
 import { Button } from "../../../components/common/Button/Button";
 import { OtpInput } from "../../../components/common/OtpInput/OtpInput";
 import { AuthLayout } from "../../../layouts/AuthLayout/AuthLayout";
+import { loginWithCode, requestAccessCode } from "../../../services/authService";
+import { getApiErrorMessage } from "../../../utils/apiErrors";
 import "./VerifyAccount.css";
 
 interface VerifyAccountLocationState {
@@ -20,7 +22,9 @@ const OTP_LENGTH = 6;
 const INITIAL_SECONDS = 60;
 
 function formatTime(totalSeconds: number) {
-  const minutes = Math.floor(totalSeconds / 60).toString().padStart(2, "0");
+  const minutes = Math.floor(totalSeconds / 60)
+    .toString()
+    .padStart(2, "0");
   const seconds = (totalSeconds % 60).toString().padStart(2, "0");
 
   return `${minutes}:${seconds}`;
@@ -96,7 +100,7 @@ export function VerifyAccount() {
 
     setMessage(null);
 
-    if (!/^\d{6}$/.test(code)) {
+    if (!new RegExp(`^\\d{${OTP_LENGTH}}$`).test(code)) {
       setCodeError("Ingresa el código de seis dígitos");
       return;
     }
@@ -104,8 +108,11 @@ export function VerifyAccount() {
     setIsSubmitting(true);
 
     try {
-      await new Promise<void>((resolve) => window.setTimeout(resolve, 800));
-      setMessage({ text: "La verificación de cuenta estará disponible próximamente.", variant: "info" });
+      await loginWithCode({ email, code });
+      setMessage({ text: "Cuenta verificada correctamente", variant: "success" });
+      navigationTimeoutRef.current = window.setTimeout(() => navigate("/"), 700);
+    } catch (error) {
+      setMessage({ text: getApiErrorMessage(error), variant: "error" });
     } finally {
       setIsSubmitting(false);
     }
@@ -120,8 +127,11 @@ export function VerifyAccount() {
     setMessage(null);
 
     try {
-      await new Promise<void>((resolve) => window.setTimeout(resolve, 600));
-      setMessage({ text: "El reenvío del código estará disponible próximamente.", variant: "info" });
+      await requestAccessCode(email);
+      setSecondsLeft(INITIAL_SECONDS);
+      setMessage({ text: "Te enviamos un nuevo código de acceso", variant: "success" });
+    } catch (error) {
+      setMessage({ text: getApiErrorMessage(error), variant: "error" });
     } finally {
       setIsResending(false);
     }
@@ -137,36 +147,21 @@ export function VerifyAccount() {
           <h1 id="verify-account-title">Verifica tu cuenta</h1>
         </div>
 
-        <p className="verify-card__description">
-          Ingresa el código de verificación que enviamos a tu correo
-        </p>
+        <p className="verify-card__description">Ingresa el código de verificación que enviamos a tu correo</p>
 
-        {email ? (
-          <strong className="verify-card__email">{maskEmail(email)}</strong>
-        ) : null}
+        {email ? <strong className="verify-card__email">{maskEmail(email)}</strong> : null}
 
         {message ? <AlertMessage variant={message.variant}>{message.text}</AlertMessage> : null}
 
         {email ? (
           <form className="verify-form" noValidate onSubmit={handleSubmit}>
-            <OtpInput
-              error={codeError}
-              id="verifyCode"
-              label="Código de verificación"
-              onChange={updateCode}
-              value={code}
-            />
+            <OtpInput error={codeError} id="verifyCode" label="Código de verificación" onChange={updateCode} value={code} />
 
             <p className="verify-form__timer" aria-live="polite">
               {isExpired ? "El código ha expirado" : `El código expira en ${formatTime(secondsLeft)}`}
             </p>
 
-            <Button
-              disabled={isSubmitting || isExpired}
-              isLoading={isSubmitting}
-              loadingText="Verificando..."
-              type="submit"
-            >
+            <Button disabled={isSubmitting || isExpired} isLoading={isSubmitting} loadingText="Verificando..." type="submit">
               Verificar cuenta
             </Button>
           </form>
@@ -187,7 +182,7 @@ export function VerifyAccount() {
         </div>
 
         <div className="verify-card__links">
-          {!email ? <Link to="/registro">Volver al registro</Link> : null}
+          {!email ? <Link to="/register">Volver al registro</Link> : null}
           <Link to="/login">Volver al inicio de sesión</Link>
         </div>
       </section>

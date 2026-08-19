@@ -13,7 +13,7 @@
 
 .login-card__heading p {
   margin: 0 0 0.4rem;
-  color: var(--color-primary);
+  color: var(--color-success-dark);
   font-size: 0.9rem;
   font-weight: 900;
 }
@@ -28,7 +28,7 @@
 
 .login-form {
   display: grid;
-  gap: 1rem;
+  gap: var(--space-4);
 }
 
 .login-form__options {
@@ -41,7 +41,7 @@
 
 .login-form__link,
 .login-card__footer a {
-  color: var(--color-primary);
+  color: var(--color-success-dark);
   font-size: 0.92rem;
   font-weight: 800;
   text-decoration: none;
@@ -49,7 +49,7 @@
 
 .login-form__link:hover,
 .login-card__footer a:hover {
-  color: var(--color-primary-dark);
+  color: var(--color-navy);
   text-decoration: underline;
 }
 
@@ -86,7 +86,7 @@
   flex: 1;
   height: 1px;
   content: "";
-  background: var(--color-border);
+  background: linear-gradient(90deg, transparent, var(--color-border), transparent);
 }
 
 .login-card__note,
@@ -106,6 +106,7 @@
 @media (max-width: 560px) {
   .login-card {
     border-radius: 20px;
+    box-shadow: 0 16px 44px rgba(16, 24, 40, 0.1);
   }
 
   .login-form__options {

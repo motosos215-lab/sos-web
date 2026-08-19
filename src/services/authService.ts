@@ -2,6 +2,7 @@ import type {
   ApiResponse,
   ApiUserProfile,
   LoginCredentials,
+  LoginData,
   LoginWithCodeRequest,
   LoginWithCodeResult,
   RegisterRequest,
@@ -14,10 +15,12 @@ import {
   getActiveUserId,
   getSessionForUser,
   saveSession,
+  updateSession,
   type SetupStepKey,
   type SimulatedSession,
   type UserRole,
 } from "./sessionService";
+import { getOnboardingStatus, getSetupStepFromOnboardingStatus } from "./onboardingService";
 import { mapApiRoleToAppRole } from "../utils/authRole";
 import { toValidDateIso } from "../utils/tokenExpiry";
 
@@ -25,11 +28,7 @@ const ROLE_INCOMPATIBLE_MESSAGE = "Tu cuenta tiene un rol que todavía no es com
 
 function assertApiBaseUrl() {
   if (!hasApiBaseUrl()) {
-    throw new ApiRequestError(
-      "missing_config",
-      "La aplicación no tiene configurada la dirección del servicio",
-      null,
-    );
+    throw new ApiRequestError("missing_config", "La aplicación no tiene configurada la dirección del servicio", null);
   }
 }
 
@@ -53,16 +52,6 @@ function isEmailLike(value: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
-interface LoginEnvelopeData {
-  accessToken?: unknown;
-  refreshToken?: unknown;
-  accessTokenExpiresAtUtc?: unknown;
-  refreshTokenExpiresAtUtc?: unknown;
-  tokens?: unknown;
-  user?: unknown;
-  id?: unknown;
-}
-
 interface RawTokens {
   accessToken: string;
   refreshToken: string;
@@ -70,7 +59,7 @@ interface RawTokens {
   refreshTokenExpiresAtUtc?: string;
 }
 
-function extractLoginTokens(body: ApiResponse<LoginEnvelopeData> | null | undefined): RawTokens | null {
+function extractLoginTokens(body: ApiResponse<LoginData> | null | undefined): RawTokens | null {
   if (!body || !body.success || body.data == null || !isRecord(body.data)) {
     return null;
   }
@@ -98,18 +87,22 @@ function extractLoginTokens(body: ApiResponse<LoginEnvelopeData> | null | undefi
   };
 }
 
-function extractUserFromEnvelope(body: ApiResponse<LoginEnvelopeData> | null | undefined): ApiUserProfile | null {
+function extractApiUserProfile(value: unknown): ApiUserProfile | null {
+  if (!isRecord(value)) {
+    return null;
+  }
+
+  const source = isRecord(value.user) ? value.user : value;
+
+  return parseApiUserProfile(source);
+}
+
+function extractUserFromEnvelope(body: ApiResponse<LoginData> | null | undefined): ApiUserProfile | null {
   if (!body || !body.success || body.data == null || !isRecord(body.data)) {
     return null;
   }
 
-  const userSource = isRecord(body.data.user) ? body.data.user : null;
-
-  if (!userSource) {
-    return null;
-  }
-
-  return parseApiUserProfile(userSource);
+  return extractApiUserProfile(body.data.user);
 }
 
 function parseApiUserProfile(value: unknown): ApiUserProfile | null {
@@ -141,13 +134,13 @@ function parseApiUserProfile(value: unknown): ApiUserProfile | null {
 }
 
 async function fetchUserWithToken(accessToken: string): Promise<ApiUserProfile> {
-  const response = await publicApi.get<ApiResponse<ApiUserProfile>>("/api/v1/users/me", {
+  const response = await publicApi.get<ApiResponse<unknown>>("/api/v1/users/me", {
     headers: {
       Authorization: `Bearer ${accessToken}`,
     },
   });
 
-  const user = parseApiUserProfile(unwrap<unknown>(response));
+  const user = extractApiUserProfile(unwrap<unknown>(response));
 
   if (!user) {
     throw new ApiRequestError("invalid_response", "Recibimos una respuesta inesperada del servicio", response.status);
@@ -215,35 +208,71 @@ export function mergeAuthenticatedUserWithSetupState(user: ApiUserProfile, role:
   return session;
 }
 
+export async function syncRiderOnboardingSession(session: SimulatedSession): Promise<SimulatedSession> {
+  if (session.role !== "conductor") {
+    return session;
+  }
+
+  const status = await getOnboardingStatus();
+  const nextStep = getSetupStepFromOnboardingStatus(status, session.currentSetupStep);
+  const setupCompleted = status.isCompleted === true || status.isConfirmed === true || nextStep === "completed";
+  const completedAt = setupCompleted ? session.setupCompletedAt || new Date().toISOString() : "";
+
+  const updates: Partial<SimulatedSession> = {
+    setupCompleted,
+    registrationStatus: setupCompleted ? "completed" : "pending",
+    currentSetupStep: setupCompleted ? "completed" : nextStep,
+    setupCompletedAt: completedAt,
+    accountStatus: "active",
+    onboardingStatusSnapshot: status,
+  };
+
+  return updateSession(updates) ?? { ...session, ...updates };
+}
+
 function throwIncompatibleRole(): never {
   clearSession();
   throw new ApiRequestError("role_incompatible", ROLE_INCOMPATIBLE_MESSAGE, null);
 }
 
 export async function getCurrentUser(): Promise<ApiUserProfile> {
-  const response = await api.get<ApiResponse<ApiUserProfile>>("/api/v1/users/me");
-  return unwrap<ApiUserProfile>(response);
+  const response = await api.get<ApiResponse<unknown>>("/api/v1/users/me");
+  const user = extractApiUserProfile(unwrap<unknown>(response));
+
+  if (!user) {
+    throw new ApiRequestError("invalid_response", "Recibimos una respuesta inesperada del servicio", response.status);
+  }
+
+  return user;
 }
 
 export async function login(credentials: LoginCredentials): Promise<SimulatedSession> {
   assertApiBaseUrl();
 
-  const response = await publicApi.post<ApiResponse<LoginEnvelopeData>>("/api/v1/auth/login", {
+  const response = await publicApi.post<ApiResponse<LoginData>>("/api/v1/auth/login", {
     email: credentials.email,
     password: credentials.password,
     rememberMe: credentials.rememberMe,
   });
 
-  const tokens = extractLoginTokens(response.data);
+  return createSessionFromLoginResponse(response.data, response.status);
+}
+
+async function createSessionFromLoginResponse(body: ApiResponse<LoginData> | null, status: number): Promise<SimulatedSession> {
+  const tokens = extractLoginTokens(body);
 
   if (!tokens) {
-    throw new ApiRequestError("invalid_response", "Recibimos una respuesta inesperada del servicio", response.status);
+    throw new ApiRequestError("invalid_response", "Recibimos una respuesta inesperada del servicio", status);
   }
 
-  const loginUser = extractUserFromEnvelope(response.data);
+  const loginUser = extractUserFromEnvelope(body);
 
   if (!loginUser) {
-    throw new ApiRequestError("invalid_response", "Recibimos una respuesta inesperada del servicio", response.status);
+    throw new ApiRequestError("invalid_response", "Recibimos una respuesta inesperada del servicio", status);
+  }
+
+  if (loginUser.isActive !== true) {
+    throw new ApiRequestError("inactive_account", "Esta cuenta no está activa", null);
   }
 
   saveAuthTokens(loginUser.id, tokens);
@@ -267,7 +296,8 @@ export async function login(credentials: LoginCredentials): Promise<SimulatedSes
     throwIncompatibleRole();
   }
 
-  return mergeAuthenticatedUserWithSetupState(user, roleResult.role);
+  const session = mergeAuthenticatedUserWithSetupState(user, roleResult.role);
+  return syncRiderOnboardingSession(session);
 }
 
 export async function register(data: RegisterRequest): Promise<void> {
@@ -296,6 +326,20 @@ export async function forgotPassword(email: string): Promise<void> {
   await publicApi.post("/api/v1/auth/forgot-password", {
     email,
   });
+}
+
+export async function resetPassword(email: string, code: string, newPassword: string): Promise<void> {
+  assertApiBaseUrl();
+
+  const response = await publicApi.post<ApiResponse<unknown>>("/api/v1/auth/reset-password", {
+    email,
+    code,
+    newPassword,
+  });
+
+  if (response.status !== 204) {
+    unwrap<unknown>(response);
+  }
 }
 
 export async function logout(): Promise<void> {
@@ -330,19 +374,11 @@ export async function requestAccessCode(email: string): Promise<void> {
 }
 
 export async function loginWithCode(_request: LoginWithCodeRequest): Promise<LoginWithCodeResult> {
-  try {
-    assertApiBaseUrl();
-    const response = await publicApi.post<ApiResponse<unknown>>("/api/v1/auth/login-with-code", {
-      code: _request.code,
-    });
-    unwrap<unknown>(response);
-  } catch (error) {
-    if (error instanceof ApiRequestError && error.code === "http_501") {
-      return {};
-    }
-
-    throw error;
-  }
-
+  assertApiBaseUrl();
+  const response = await publicApi.post<ApiResponse<LoginData>>("/api/v1/auth/login-with-code", {
+    email: _request.email,
+    code: _request.code,
+  });
+  await createSessionFromLoginResponse(response.data, response.status);
   return {};
 }

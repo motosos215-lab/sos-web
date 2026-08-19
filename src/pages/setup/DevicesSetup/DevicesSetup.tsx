@@ -4,17 +4,18 @@ import { AlertMessage } from "../../../components/common/AlertMessage/AlertMessa
 import { Button } from "../../../components/common/Button/Button";
 import { SetupLayout } from "../../../layouts/SetupLayout/SetupLayout";
 import {
-  checkDeviceDuplicate,
   generateMobileActivationCode,
+  getLinkedDevices,
   refreshDeviceStatus,
   regenerateMobileActivationCode,
   revokeDevice,
-  simulateMobileAppLink,
-  simulateSmartwatchStatus,
+  linkMobileApp,
+  checkSmartwatchStatus,
 } from "../../../services/deviceService";
 import { getStoredDevicesState, saveStoredDevicesState, updateStoredDevicesState } from "../../../services/deviceStorageService";
 import { updateSession } from "../../../services/sessionService";
 import type { ActivationCode, DevicesSetupState, LinkedDevice } from "../../../types/device";
+import { getApiErrorMessage } from "../../../utils/apiErrors";
 import { copyTextToClipboard } from "../../../utils/clipboard";
 import { DeviceStatusCard } from "./DeviceStatusCard";
 import { EmptyDeviceState } from "./EmptyDeviceState";
@@ -28,9 +29,7 @@ function getInitialDevicesState(): DevicesSetupState {
 }
 
 function isCodeUsable(activationCode: ActivationCode | null) {
-  return Boolean(
-    activationCode && activationCode.status === "active" && new Date(activationCode.expiresAt).getTime() > Date.now(),
-  );
+  return Boolean(activationCode && activationCode.status === "active" && new Date(activationCode.expiresAt).getTime() > Date.now());
 }
 
 export function DevicesSetup() {
@@ -42,7 +41,7 @@ export function DevicesSetup() {
   const [errorMessage, setErrorMessage] = useState("");
   const [isGeneratingCode, setIsGeneratingCode] = useState(false);
   const [isLinkingMobile, setIsLinkingMobile] = useState(false);
-  const [isSimulatingWatch, setIsSimulatingWatch] = useState(false);
+  const [isCheckingWatchStatus, setIsCheckingWatchStatus] = useState(false);
   const [refreshingDeviceId, setRefreshingDeviceId] = useState<string | null>(null);
   const [deviceToRevoke, setDeviceToRevoke] = useState<LinkedDevice | null>(null);
   const [isRevokingDevice, setIsRevokingDevice] = useState(false);
@@ -53,8 +52,22 @@ export function DevicesSetup() {
   const canUseCode = isCodeUsable(activationCode) && !hasLinkedMobileDevice;
 
   useEffect(() => {
-    const storedState = getStoredDevicesState();
-    setDevicesState(storedState);
+    setDevicesState(getStoredDevicesState());
+
+    const loadDevices = async () => {
+      try {
+        const response = await getLinkedDevices();
+        if (response.success && response.data) {
+          setDevicesState(response.data);
+        } else {
+          setWarningMessage(response.message);
+        }
+      } catch (error) {
+        setErrorMessage(getApiErrorMessage(error));
+      }
+    };
+
+    void loadDevices();
   }, []);
 
   const clearMessages = () => {
@@ -149,7 +162,7 @@ export function DevicesSetup() {
     setSuccessMessage(didCopy ? "Enlace de activación copiado" : "No pudimos copiar el enlace automáticamente");
   };
 
-  const handleSimulateMobileLink = async () => {
+  const handleLinkMobileApp = async () => {
     if (!activationCode || !canUseCode || hasLinkedMobileDevice) {
       return;
     }
@@ -158,13 +171,7 @@ export function DevicesSetup() {
     setIsLinkingMobile(true);
 
     try {
-      const duplicateResponse = await checkDeviceDuplicate("MOBILE-DEMO-001");
-      if (!duplicateResponse.success) {
-        setErrorMessage(duplicateResponse.message);
-        return;
-      }
-
-      const response = await simulateMobileAppLink(activationCode.code);
+      const response = await linkMobileApp(activationCode.code);
       if (!response.success || !response.data) {
         setErrorMessage(response.message);
         return;
@@ -175,23 +182,23 @@ export function DevicesSetup() {
       setSuccessMessage(response.message);
       setInfoMessage("La app móvil reportará el estado del smartwatch cuando se sincronice.");
     } catch {
-      setErrorMessage("No pudimos simular la vinculación de la app móvil.");
+      setErrorMessage("No pudimos vincular la app móvil.");
     } finally {
       setIsLinkingMobile(false);
     }
   };
 
-  const handleSimulateSmartwatch = async () => {
+  const handleCheckSmartwatchStatus = async () => {
     if (!hasLinkedMobileDevice) {
       setWarningMessage("Vincula la aplicación móvil antes de consultar el smartwatch");
       return;
     }
 
     clearMessages();
-    setIsSimulatingWatch(true);
+    setIsCheckingWatchStatus(true);
 
     try {
-      const response = await simulateSmartwatchStatus();
+      const response = await checkSmartwatchStatus();
       if (!response.success || !response.data) {
         setErrorMessage(response.message);
         return;
@@ -203,7 +210,7 @@ export function DevicesSetup() {
     } catch {
       setErrorMessage("No pudimos consultar el estado reportado por la app móvil.");
     } finally {
-      setIsSimulatingWatch(false);
+      setIsCheckingWatchStatus(false);
     }
   };
 
@@ -297,7 +304,7 @@ export function DevicesSetup() {
       mobileDeviceLinked: true,
       mobileDeviceId: mobileDevice?.id ?? null,
       smartwatchLinked: hasLinkedSmartwatch,
-      smartwatchDeviceId: hasLinkedSmartwatch ? smartwatchDevice?.id ?? null : null,
+      smartwatchDeviceId: hasLinkedSmartwatch ? (smartwatchDevice?.id ?? null) : null,
     });
 
     window.setTimeout(() => navigate("/configuracion/plan"), hasLinkedSmartwatch ? 0 : 700);
@@ -316,9 +323,7 @@ export function DevicesSetup() {
         </header>
 
         <section className="devices-setup__notice" aria-label="Información de privacidad y seguridad">
-          <p>
-            Los dispositivos vinculados se utilizarán únicamente para monitoreo, alertas y sincronización autorizada en MotoSOS.
-          </p>
+          <p>Los dispositivos vinculados se utilizarán únicamente para monitoreo, alertas y sincronización autorizada en MotoSOS.</p>
         </section>
 
         <div className="devices-setup__messages" aria-live="polite">
@@ -339,7 +344,7 @@ export function DevicesSetup() {
           onExpire={handleExpireCode}
           onGenerate={handleGenerateCode}
           onRegenerate={handleRegenerateCode}
-          onSimulateLink={handleSimulateMobileLink}
+          onLinkMobileApp={handleLinkMobileApp}
         />
 
         <section className="devices-setup__status" aria-labelledby="devices-status-title">
@@ -365,11 +370,11 @@ export function DevicesSetup() {
 
             <SmartwatchStatusCard
               isRefreshing={Boolean(smartwatchDevice && refreshingDeviceId === smartwatchDevice.id)}
-              isSimulating={isSimulatingWatch}
+              isCheckingStatus={isCheckingWatchStatus}
               mobileDevice={mobileDevice}
               onRefresh={handleRefreshDevice}
               onRevoke={setDeviceToRevoke}
-              onSimulate={handleSimulateSmartwatch}
+              onCheckStatus={handleCheckSmartwatchStatus}
               smartwatchDevice={smartwatchDevice}
             />
           </div>
@@ -384,9 +389,13 @@ export function DevicesSetup() {
         ) : null}
 
         <section className="devices-setup__actions" aria-label="Navegación de configuración">
-          <Button onClick={handleSaveState} type="button" variant="secondary">Guardar estado</Button>
+          <Button onClick={handleSaveState} type="button" variant="secondary">
+            Guardar estado
+          </Button>
           <div>
-            <Button onClick={() => navigate("/configuracion/contactos")} type="button" variant="secondary">Anterior</Button>
+            <Button onClick={() => navigate("/configuracion/contactos")} type="button" variant="secondary">
+              Anterior
+            </Button>
             <Button disabled={!hasLinkedMobileDevice} onClick={handleContinue} type="button">
               Guardar y continuar
             </Button>

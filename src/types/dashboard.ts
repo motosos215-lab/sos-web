@@ -24,6 +24,9 @@ export interface DashboardCoordinates {
 export interface DashboardIncident {
   id: string;
   folio: string;
+  tripId: string | null;
+  alertDispatchId: string | null;
+  notificationDeliveryAttemptId: string | null;
   driverName: string;
   vehicleAlias: string;
   vehicleDescription: string;

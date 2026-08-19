@@ -59,6 +59,11 @@ export function ContactFormModal({
   values,
 }: ContactFormModalProps) {
   const dialogRef = useRef<HTMLDivElement | null>(null);
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -67,7 +72,7 @@ export function ContactFormModal({
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        onClose();
+        onCloseRef.current();
         return;
       }
 
@@ -97,17 +102,11 @@ export function ContactFormModal({
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
+  }, []);
 
   return (
     <div className="contact-modal" role="presentation">
-      <div
-        aria-labelledby="contact-form-title"
-        aria-modal="true"
-        className="contact-modal__dialog"
-        ref={dialogRef}
-        role="dialog"
-      >
+      <div aria-labelledby="contact-form-title" aria-modal="true" className="contact-modal__dialog" ref={dialogRef} role="dialog">
         <header className="contact-modal__header">
           <div>
             <p>Contacto de emergencia</p>
@@ -128,6 +127,7 @@ export function ContactFormModal({
               maxLength={80}
               name="fullName"
               onChange={(event) => onChange("fullName", event.target.value)}
+              placeholder="Ej. María Pérez"
               type="text"
               value={values.fullName}
             />
@@ -139,7 +139,7 @@ export function ContactFormModal({
               name="relationship"
               onChange={(event) => onChange("relationship", event.target.value)}
               options={relationshipOptions}
-              placeholder="Selecciona una relación"
+              placeholder="Ej. Madre"
               value={values.relationship}
             />
             {values.relationship === "Otro" ? (
@@ -151,6 +151,7 @@ export function ContactFormModal({
                 maxLength={60}
                 name="customRelationship"
                 onChange={(event) => onChange("customRelationship", event.target.value)}
+                placeholder="Ej. Vecino de confianza"
                 type="text"
                 value={values.customRelationship}
               />
@@ -159,12 +160,14 @@ export function ContactFormModal({
               data-field="phone"
               error={errors.phone}
               id="contactPhone"
-              inputMode="tel"
+              inputMode="numeric"
               label="Teléfono"
-              maxLength={24}
+              maxLength={10}
               name="phone"
-              onChange={(event) => onChange("phone", event.target.value)}
-              type="tel"
+              onChange={(event) => onChange("phone", event.target.value.replace(/\D/g, "").slice(0, 10))}
+              pattern="[0-9]{10}"
+              placeholder="Ej. 7711234567"
+              type="text"
               value={values.phone}
             />
             <Input
@@ -175,6 +178,7 @@ export function ContactFormModal({
               maxLength={120}
               name="email"
               onChange={(event) => onChange("email", event.target.value)}
+              placeholder="ejemplo@correo.com"
               type="email"
               value={values.email}
             />
@@ -186,7 +190,7 @@ export function ContactFormModal({
               name="priority"
               onChange={(event) => onChange("priority", event.target.value as EmergencyContactDraft["priority"])}
               options={priorityOptions}
-              placeholder="Selecciona la prioridad"
+              placeholder="Ej. Contacto principal"
               value={values.priority}
             />
             <Select
@@ -197,14 +201,12 @@ export function ContactFormModal({
               name="invitationChannel"
               onChange={(event) => onChange("invitationChannel", event.target.value as EmergencyContactDraft["invitationChannel"])}
               options={invitationChannelOptions}
-              placeholder="Selecciona el canal"
+              placeholder="Ej. Correo electrónico"
               value={values.invitationChannel}
             />
           </div>
 
-          <p className="contact-modal__info">
-            La invitación permitirá que el contacto se vincule desde la app MotoSOS en modo monitor.
-          </p>
+          <p className="contact-modal__info">La invitación permitirá que el contacto se vincule desde la app MotoSOS en modo monitor.</p>
 
           <ContactPermissionSwitches
             criticalAlertMessage={criticalAlertMessage}

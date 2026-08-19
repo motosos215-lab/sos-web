@@ -1,19 +1,8 @@
 export type VehicleType = "motocicleta" | "motoneta";
 
-export type VehicleMainUse =
-  | "personal"
-  | "trabajo_reparto"
-  | "escuela"
-  | "recreativo"
-  | "viajes_largos"
-  | "mixto";
+export type VehicleMainUse = "personal" | "trabajo_reparto" | "escuela" | "recreativo" | "viajes_largos" | "mixto";
 
-export type VehicleUseFrequency =
-  | "diario"
-  | "cuatro_seis_semana"
-  | "dos_tres_semana"
-  | "semanal"
-  | "ocasional";
+export type VehicleUseFrequency = "diario" | "cuatro_seis_semana" | "dos_tres_semana" | "semanal" | "ocasional";
 
 export interface VehicleFormData {
   vehicleType: VehicleType | "";

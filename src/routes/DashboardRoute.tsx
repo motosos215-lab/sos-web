@@ -1,5 +1,5 @@
 import { Navigate, Outlet, useLocation } from "react-router-dom";
-import { getSetupStepPath } from "../config/setupSteps";
+import { resolveOnboardingRoute } from "../services/onboardingService";
 import { getSession } from "../services/sessionService";
 
 export function DashboardRoute() {
@@ -11,7 +11,7 @@ export function DashboardRoute() {
   }
 
   if (session.role === "conductor" && !session.setupCompleted) {
-    const setupPath = getSetupStepPath(session.currentSetupStep);
+    const setupPath = resolveOnboardingRoute(session.onboardingStatusSnapshot ?? {}, session);
 
     if (location.pathname !== setupPath) {
       return <Navigate to={setupPath} replace />;

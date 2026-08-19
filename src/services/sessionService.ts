@@ -1,18 +1,12 @@
 import type { LicenseType, PlanId, PlanStatus } from "../types/plan";
+import type { OnboardingStatus } from "../types/onboarding";
 
 export type UserRole = "conductor" | "monitor" | "administrador";
 export type SimulatedPlan = PlanId;
 export type AccountStatus = "active" | "pending" | "inactive";
 export type RegistrationStatus = "pending" | "completed";
 
-export type SetupStepKey =
-  | "perfil"
-  | "motocicleta"
-  | "contactos"
-  | "dispositivos"
-  | "plan"
-  | "confirmacion"
-  | "completed";
+export type SetupStepKey = "perfil" | "motocicleta" | "contactos" | "dispositivos" | "plan" | "confirmacion" | "completed";
 
 export interface SimulatedSession {
   userId: string;
@@ -41,10 +35,12 @@ export interface SimulatedSession {
   smartwatchLinked: boolean;
   mobileDeviceId: string | null;
   smartwatchDeviceId: string | null;
+  onboardingStatusSnapshot?: OnboardingStatus;
 }
 
 const LEGACY_SESSION_KEY = "motosos.simulatedSession";
 const CURRENT_USER_KEY = "motosos.currentUserId";
+const sessionsByUserId = new Map<string, SimulatedSession>();
 
 function setupKeyFor(userId: string): string {
   return `motosos.setup.${userId}`;
@@ -92,14 +88,34 @@ function isAccountStatus(value: unknown): value is AccountStatus {
   return value === "active" || value === "pending" || value === "inactive";
 }
 
+function isOnboardingStatusSnapshot(value: unknown): value is OnboardingStatus {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return false;
+  }
+
+  const snapshot = value as Partial<OnboardingStatus>;
+  const optionalBooleans = [
+    snapshot.isCompleted,
+    snapshot.isConfirmed,
+    snapshot.profileCompleted,
+    snapshot.vehicleCompleted,
+    snapshot.emergencyContactsCompleted,
+    snapshot.devicesCompleted,
+    snapshot.planCompleted,
+  ];
+
+  return (
+    (snapshot.currentStep === undefined || isSetupStepKey(snapshot.currentStep)) &&
+    optionalBooleans.every((item) => item === undefined || typeof item === "boolean")
+  );
+}
+
 function parseSession(value: string): SimulatedSession | null {
   try {
     const parsed = JSON.parse(value) as Partial<SimulatedSession>;
 
     if (
       typeof parsed.userId !== "string" ||
-      typeof parsed.name !== "string" ||
-      typeof parsed.email !== "string" ||
       !isUserRole(parsed.role) ||
       typeof parsed.setupCompleted !== "boolean" ||
       !isSetupStepKey(parsed.currentSetupStep)
@@ -109,8 +125,8 @@ function parseSession(value: string): SimulatedSession | null {
 
     return {
       userId: parsed.userId,
-      name: parsed.name,
-      email: parsed.email,
+      name: typeof parsed.name === "string" ? parsed.name : "Usuario MotoSOS",
+      email: typeof parsed.email === "string" ? parsed.email : "",
       role: parsed.role,
       accountStatus: isAccountStatus(parsed.accountStatus) ? parsed.accountStatus : parsed.setupCompleted ? "active" : "pending",
       setupCompleted: parsed.setupCompleted,
@@ -136,22 +152,48 @@ function parseSession(value: string): SimulatedSession | null {
       planActivatedAt: typeof parsed.planActivatedAt === "string" ? parsed.planActivatedAt : new Date().toISOString(),
       vehicleRegistered: typeof parsed.vehicleRegistered === "boolean" ? parsed.vehicleRegistered : false,
       vehicleId: typeof parsed.vehicleId === "string" ? parsed.vehicleId : null,
-      emergencyContactConfigured:
-        typeof parsed.emergencyContactConfigured === "boolean" ? parsed.emergencyContactConfigured : false,
+      emergencyContactConfigured: typeof parsed.emergencyContactConfigured === "boolean" ? parsed.emergencyContactConfigured : false,
       emergencyContactId: typeof parsed.emergencyContactId === "string" ? parsed.emergencyContactId : null,
       devicesConfigured: typeof parsed.devicesConfigured === "boolean" ? parsed.devicesConfigured : false,
       mobileDeviceLinked: typeof parsed.mobileDeviceLinked === "boolean" ? parsed.mobileDeviceLinked : false,
       smartwatchLinked: typeof parsed.smartwatchLinked === "boolean" ? parsed.smartwatchLinked : false,
       mobileDeviceId: typeof parsed.mobileDeviceId === "string" ? parsed.mobileDeviceId : null,
       smartwatchDeviceId: typeof parsed.smartwatchDeviceId === "string" ? parsed.smartwatchDeviceId : null,
+      onboardingStatusSnapshot: isOnboardingStatusSnapshot(parsed.onboardingStatusSnapshot) ? parsed.onboardingStatusSnapshot : undefined,
     };
   } catch {
     return null;
   }
 }
 
+function toStoredSession(session: SimulatedSession): Partial<SimulatedSession> {
+  return {
+    userId: session.userId,
+    role: session.role,
+    accountStatus: session.accountStatus,
+    setupCompleted: session.setupCompleted,
+    registrationStatus: session.registrationStatus,
+    setupCompletedAt: session.setupCompletedAt,
+    currentSetupStep: session.currentSetupStep,
+    plan: session.plan,
+    planStatus: session.planStatus,
+    licenseType: session.licenseType,
+    contactLimit: session.contactLimit,
+    vehicleLimit: session.vehicleLimit,
+    driverLimit: session.driverLimit,
+    planConfigured: session.planConfigured,
+    planActivatedAt: session.planActivatedAt,
+    vehicleRegistered: session.vehicleRegistered,
+    devicesConfigured: session.devicesConfigured,
+    mobileDeviceLinked: session.mobileDeviceLinked,
+    smartwatchLinked: session.smartwatchLinked,
+    onboardingStatusSnapshot: session.onboardingStatusSnapshot,
+  };
+}
+
 export function saveSession(session: SimulatedSession) {
-  window.sessionStorage.setItem(setupKeyFor(session.userId), JSON.stringify(session));
+  sessionsByUserId.set(session.userId, session);
+  window.sessionStorage.setItem(setupKeyFor(session.userId), JSON.stringify(toStoredSession(session)));
   window.sessionStorage.setItem(CURRENT_USER_KEY, session.userId);
   window.sessionStorage.removeItem(LEGACY_SESSION_KEY);
 }
@@ -183,6 +225,10 @@ export function getSession(): SimulatedSession | null {
 
   const storedSession = window.sessionStorage.getItem(setupKeyFor(currentUserId));
 
+  if (sessionsByUserId.has(currentUserId)) {
+    return sessionsByUserId.get(currentUserId) ?? null;
+  }
+
   if (!storedSession) {
     return migrateLegacySession();
   }
@@ -196,6 +242,10 @@ export function getSessionForUser(userId: string): SimulatedSession | null {
   }
 
   const storedSession = window.sessionStorage.getItem(setupKeyFor(userId));
+
+  if (sessionsByUserId.has(userId)) {
+    return sessionsByUserId.get(userId) ?? null;
+  }
 
   return storedSession ? parseSession(storedSession) : null;
 }
@@ -216,6 +266,7 @@ export function clearSession() {
   const currentUserId = getActiveUserId();
 
   if (currentUserId) {
+    sessionsByUserId.delete(currentUserId);
     window.sessionStorage.removeItem(CURRENT_USER_KEY);
   }
 

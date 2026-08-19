@@ -9,16 +9,17 @@ interface ContactListProps {
   onResend: (contact: EmergencyContact) => void;
   onRevoke: (contact: EmergencyContact) => void;
   onSend: (contact: EmergencyContact) => void;
-  onSimulateLink: (contact: EmergencyContact) => void;
 }
 
 function getInitials(name: string) {
-  return name
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part.charAt(0).toUpperCase())
-    .join("") || "C";
+  return (
+    name
+      .trim()
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((part) => part.charAt(0).toUpperCase())
+      .join("") || "C"
+  );
 }
 
 function PermissionValue({ value }: { value: boolean }) {
@@ -33,7 +34,6 @@ function ContactActions({
   onResend,
   onRevoke,
   onSend,
-  onSimulateLink,
 }: ContactListProps & { contact: EmergencyContact }) {
   const hasActiveInvitation = Boolean(contact.invitationCode && contact.invitationLink && contact.invitationStatus === "invited");
   const canEdit = contact.invitationStatus !== "revoked";
@@ -47,16 +47,13 @@ function ContactActions({
       <button disabled={contact.invitationStatus !== "pending"} onClick={() => onSend(contact)} type="button">
         Enviar invitación
       </button>
-      <button disabled={!(["invited", "expired"].includes(contact.invitationStatus))} onClick={() => onResend(contact)} type="button">
+      <button disabled={!["invited", "expired"].includes(contact.invitationStatus)} onClick={() => onResend(contact)} type="button">
         Reenviar invitación
       </button>
       <button disabled={!hasActiveInvitation} onClick={() => onCopy(contact)} type="button">
         Copiar código
       </button>
-      <button disabled={contact.invitationStatus !== "invited"} onClick={() => onSimulateLink(contact)} type="button">
-        Simular aceptación
-      </button>
-      <button disabled={!(["invited", "linked"].includes(contact.invitationStatus))} onClick={() => onRevoke(contact)} type="button">
+      <button disabled={!["invited", "linked"].includes(contact.invitationStatus)} onClick={() => onRevoke(contact)} type="button">
         Revocar acceso
       </button>
       <button disabled={!canDelete} onClick={() => onDelete(contact)} type="button">
@@ -95,20 +92,38 @@ export function ContactList(props: ContactListProps) {
         {props.contacts.map((contact) => (
           <article className="contacts-table__row" key={contact.id} role="row">
             <div className="contacts-table__person" role="cell" data-label="Contacto">
-              <span className="contacts-table__avatar" aria-hidden="true">{getInitials(contact.fullName)}</span>
+              <span className="contacts-table__avatar" aria-hidden="true">
+                {getInitials(contact.fullName)}
+              </span>
               <span>
                 <strong>{contact.fullName}</strong>
                 {contact.priority === "principal" ? <small>Principal</small> : null}
               </span>
             </div>
-            <span role="cell" data-label="Parentesco">{contact.relationship}</span>
-            <span role="cell" data-label="Teléfono">{contact.phone}</span>
-            <span role="cell" data-label="Correo">{contact.email}</span>
-            <span role="cell" data-label="Estado"><ContactStatusBadge status={contact.invitationStatus} /></span>
-            <span role="cell" data-label="Ubicación"><PermissionValue value={contact.permissions.realTimeLocation} /></span>
-            <span role="cell" data-label="Críticas"><PermissionValue value={contact.permissions.criticalAlerts} /></span>
-            <span role="cell" data-label="Menores"><PermissionValue value={contact.permissions.minorIncidents} /></span>
-            <span role="cell" data-label="Vitales"><PermissionValue value={contact.permissions.vitalSigns} /></span>
+            <span role="cell" data-label="Parentesco">
+              {contact.relationship}
+            </span>
+            <span role="cell" data-label="Teléfono">
+              {contact.phone}
+            </span>
+            <span role="cell" data-label="Correo">
+              {contact.email}
+            </span>
+            <span role="cell" data-label="Estado">
+              <ContactStatusBadge status={contact.invitationStatus} />
+            </span>
+            <span role="cell" data-label="Ubicación">
+              <PermissionValue value={contact.permissions.realTimeLocation} />
+            </span>
+            <span role="cell" data-label="Críticas">
+              <PermissionValue value={contact.permissions.criticalAlerts} />
+            </span>
+            <span role="cell" data-label="Menores">
+              <PermissionValue value={contact.permissions.minorIncidents} />
+            </span>
+            <span role="cell" data-label="Vitales">
+              <PermissionValue value={contact.permissions.vitalSigns} />
+            </span>
             <div role="cell" data-label="Acciones">
               <ContactActions {...props} contact={contact} />
             </div>

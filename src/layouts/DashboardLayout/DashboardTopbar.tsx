@@ -67,26 +67,42 @@ export function DashboardTopbar({ isMenuOpen, onLogout, onToggleMenu, session }:
         className="dashboard-search"
         onSubmit={(event) => {
           event.preventDefault();
-          setSearchMessage("La búsqueda global estará disponible próximamente");
+          const data = new FormData(event.currentTarget);
+          const query = String(data.get("search") ?? "").trim();
+          setSearchMessage(
+            query
+              ? session.role === "monitor"
+                ? "Las alertas asignadas se muestran en el resumen"
+                : "Usa el filtro de Incidentes para búsquedas detalladas"
+              : "Ingresa un término de búsqueda",
+          );
+          if (query && session.role !== "monitor") {
+            navigate("/dashboard/incidentes");
+          }
         }}
       >
-        <label className="sr-only" htmlFor="dashboard-search">Buscar en el sistema</label>
+        <label className="sr-only" htmlFor="dashboard-search">
+          Buscar en el sistema
+        </label>
         <Search aria-hidden="true" size={18} />
-        <input id="dashboard-search" name="search" placeholder="Buscar en el sistema..." type="search" />
+        <input id="dashboard-search" name="search" placeholder="Ej. alerta, contacto o folio" type="search" />
       </form>
 
       <div className="dashboard-topbar__actions">
-        {searchMessage ? <span className="dashboard-topbar__message" aria-live="polite">{searchMessage}</span> : null}
+        {searchMessage ? (
+          <span className="dashboard-topbar__message" aria-live="polite">
+            {searchMessage}
+          </span>
+        ) : null}
         <div className="dashboard-topbar__notifications" ref={notificationsRef}>
           <button
             aria-expanded={isNotificationsOpen}
-            aria-label="Abrir notificaciones, 2 no leídas"
+            aria-label="Abrir notificaciones"
             ref={notificationsButtonRef}
             onClick={() => setIsNotificationsOpen((current) => !current)}
             type="button"
           >
             <Bell aria-hidden="true" size={18} />
-            <span aria-hidden="true">2</span>
           </button>
           {isNotificationsOpen ? (
             <NotificationsPopover
@@ -105,7 +121,9 @@ export function DashboardTopbar({ isMenuOpen, onLogout, onToggleMenu, session }:
             onClick={() => setIsProfileOpen((current) => !current)}
             type="button"
           >
-            <span className="dashboard-avatar" aria-hidden="true">{getInitials(session.name)}</span>
+            <span className="dashboard-avatar" aria-hidden="true">
+              {getInitials(session.name)}
+            </span>
             <span>
               <strong>{session.name}</strong>
               <small>{getRoleLabel(session.role)}</small>
@@ -113,9 +131,15 @@ export function DashboardTopbar({ isMenuOpen, onLogout, onToggleMenu, session }:
           </button>
           {isProfileOpen ? (
             <div className="dashboard-profile__menu" role="menu">
-              <button onClick={() => navigate("/dashboard/configuracion")} role="menuitem" type="button"><UserRound aria-hidden="true" size={16} /> Mi perfil</button>
-              <button onClick={() => navigate("/dashboard/configuracion")} role="menuitem" type="button"><Settings aria-hidden="true" size={16} /> Configuración</button>
-              <button onClick={onLogout} role="menuitem" type="button"><LogOut aria-hidden="true" size={16} /> Cerrar sesión</button>
+              <button onClick={() => navigate("/dashboard/configuracion")} role="menuitem" type="button">
+                <UserRound aria-hidden="true" size={16} /> Mi perfil
+              </button>
+              <button onClick={() => navigate("/dashboard/configuracion")} role="menuitem" type="button">
+                <Settings aria-hidden="true" size={16} /> Configuración
+              </button>
+              <button onClick={onLogout} role="menuitem" type="button">
+                <LogOut aria-hidden="true" size={16} /> Cerrar sesión
+              </button>
             </div>
           ) : null}
         </div>

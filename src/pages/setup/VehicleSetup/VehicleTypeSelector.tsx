@@ -25,11 +25,7 @@ export function VehicleTypeSelector({ error, onChange, value }: VehicleTypeSelec
   const errorId = error ? "vehicleType-error" : undefined;
 
   return (
-    <fieldset
-      aria-describedby={errorId}
-      aria-invalid={Boolean(error)}
-      className="vehicle-type-selector"
-    >
+    <fieldset aria-describedby={errorId} aria-invalid={Boolean(error)} className="vehicle-type-selector">
       <legend>Tipo de vehículo</legend>
       <div className="vehicle-type-selector__options">
         {vehicleTypeOptions.map((option) => {
@@ -54,9 +50,7 @@ export function VehicleTypeSelector({ error, onChange, value }: VehicleTypeSelec
               <span className="vehicle-type-selector__content">
                 <strong>{option.label}</strong>
                 <small>{option.description}</small>
-                <span className="vehicle-type-selector__state">
-                  {isSelected ? "Seleccionado" : "No seleccionado"}
-                </span>
+                <span className="vehicle-type-selector__state">{isSelected ? "Seleccionado" : "No seleccionado"}</span>
               </span>
             </label>
           );

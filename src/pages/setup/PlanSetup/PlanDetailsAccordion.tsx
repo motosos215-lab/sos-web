@@ -56,7 +56,7 @@ export function PlanDetailsAccordion({
           <small>Consulta detalles de tu plan, estado de cuenta y ayuda</small>
         </span>
         <span className="plan-details__meta" aria-hidden="true">
-          <span className="plan-details__badge">Plan: Básico</span>
+          <span className="plan-details__badge">Plan: {currentPlan?.currentPlan ?? "Básico"}</span>
           <span className="plan-details__badge">Cuenta: {accountStatusLabels[accountStatus]}</span>
         </span>
         <ChevronDown aria-hidden="true" className="plan-details__chevron" size={20} />
@@ -68,8 +68,8 @@ export function PlanDetailsAccordion({
             <section className="plan-details__section" aria-labelledby="plan-details-section-plan">
               <h4 id="plan-details-section-plan">Plan actual</h4>
               <div className="plan-details__section-row">
-                <span className="plan-details__status-badge">Activo</span>
-                <span className="plan-details__value">Básico</span>
+                <span className="plan-details__status-badge">{currentPlan?.status ?? "Activo"}</span>
+                <span className="plan-details__value">{currentPlan?.currentPlan ?? "Básico"}</span>
               </div>
               <p>Plan incluido con tu cuenta.</p>
               <div className="plan-details__refresh">
@@ -111,7 +111,7 @@ export function PlanDetailsAccordion({
             <section className="plan-details__section" aria-labelledby="plan-details-section-help">
               <h4 id="plan-details-section-help">Ayuda</h4>
               <p>¿Necesitas ayuda con tu plan o tu cuenta?</p>
-              <a className="plan-details__support" href="mailto:soporte@motosos.local">
+              <a className="plan-details__support" href="mailto:soporte@motosos.com">
                 <Headphones aria-hidden="true" size={16} />
                 Ir a Soporte y ayuda
               </a>

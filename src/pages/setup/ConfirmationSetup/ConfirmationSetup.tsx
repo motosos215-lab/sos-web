@@ -20,12 +20,10 @@ import { Checkbox } from "../../../components/common/Checkbox/Checkbox";
 import { SetupLayout } from "../../../layouts/SetupLayout/SetupLayout";
 import { getStoredDevicesState } from "../../../services/deviceStorageService";
 import { getStoredEmergencyContacts } from "../../../services/contactStorageService";
-import { completeInitialSetup, getSetupSummary } from "../../../services/setupConfirmationService";
+import { completeInitialSetup, getSetupSummaryWithFallback } from "../../../services/setupConfirmationService";
 import { getSession } from "../../../services/sessionService";
-import type {
-  SetupCompletionValidation,
-  SetupSummaryModule,
-} from "../../../types/setupConfirmation";
+import type { SetupCompletionValidation, SetupSummaryModule } from "../../../types/setupConfirmation";
+import { getApiErrorMessage } from "../../../utils/apiErrors";
 import { InstructionsModal } from "./InstructionsModal";
 import { SetupSummaryCard } from "./SetupSummaryCard";
 import "./ConfirmationSetup.css";
@@ -79,24 +77,18 @@ function getModalContent(key: ModalKey): ReactNode {
     case "terminos":
       return (
         <>
-          <p>
-            Los términos y condiciones completos estarán disponibles en la configuración del
-            dashboard en una etapa posterior.
-          </p>
-          <p>Por ahora puedes continuar con la configuración de tu cuenta.</p>
+          <p>Al activar tu cuenta confirmas que la información registrada es correcta y que autorizas su uso operativo en MotoSOS.</p>
+          <p>Podrás actualizar tus datos posteriormente desde la configuración del dashboard.</p>
         </>
       );
     case "privacidad":
       return (
         <>
           <p>
-            La información personal, de emergencia y de dispositivos se utilizará únicamente para
-            operar las funciones autorizadas de MotoSOS.
+            La información personal, de emergencia y de dispositivos se utilizará únicamente para operar las funciones autorizadas de
+            MotoSOS.
           </p>
-          <p>
-            El aviso de privacidad completo estará disponible en la configuración del dashboard en
-            una etapa posterior.
-          </p>
+          <p>Usamos estos datos para operar alertas, vinculación de contactos, dispositivos y seguimiento de incidentes autorizados.</p>
         </>
       );
   }
@@ -111,17 +103,18 @@ export function ConfirmationSetup() {
   const [validation, setValidation] = useState<SetupCompletionValidation | null>(null);
   const [isCheckboxChecked, setIsCheckboxChecked] = useState(false);
   const [checkboxError, setCheckboxError] = useState(false);
+  const [activationError, setActivationError] = useState("");
   const [isActivating, setIsActivating] = useState(false);
   const [areRecommendationsOpen, setAreRecommendationsOpen] = useState(false);
   const [activeModal, setActiveModal] = useState<ModalKey | null>(null);
 
   const successTitleRef = useRef<HTMLHeadingElement | null>(null);
 
-  const loadValidation = useCallback(() => {
+  const loadValidation = useCallback(async () => {
     setPhase("loading");
 
     try {
-      const result = getSetupSummary();
+      const result = await getSetupSummaryWithFallback();
       setValidation(result);
       setPhase("ready");
     } catch {
@@ -155,30 +148,33 @@ export function ConfirmationSetup() {
       return;
     }
 
-    const revalidated = getSetupSummary();
-    setValidation(revalidated);
-
-    if (revalidated.blockingIssues.length > 0) {
-      return;
-    }
-
-    if (!isCheckboxChecked) {
-      setCheckboxError(true);
-      return;
-    }
-
-    setCheckboxError(false);
-    setIsActivating(true);
-
     try {
+      const revalidated = await getSetupSummaryWithFallback();
+      setActivationError("");
+      setValidation(revalidated);
+
+      if (revalidated.blockingIssues.length > 0) {
+        return;
+      }
+
+      if (!isCheckboxChecked) {
+        setCheckboxError(true);
+        return;
+      }
+
+      setCheckboxError(false);
+      setIsActivating(true);
+
       const response = await completeInitialSetup();
 
       if (!response.success) {
-        setValidation(getSetupSummary());
+        setActivationError(response.message);
+        setValidation(await getSetupSummaryWithFallback());
         return;
       }
-    } catch {
-      setValidation(getSetupSummary());
+    } catch (error) {
+      setActivationError(getApiErrorMessage(error));
+      setValidation(await getSetupSummaryWithFallback());
     } finally {
       setIsActivating(false);
     }
@@ -256,10 +252,7 @@ export function ConfirmationSetup() {
             <h1 id="confirmation-success-title" ref={successTitleRef} tabIndex={-1}>
               ¡Tu cuenta está lista!
             </h1>
-            <p>
-              Has completado todos los pasos. Tu cuenta MotoSOS está activa y lista para ayudarte en
-              cada viaje.
-            </p>
+            <p>Has completado todos los pasos. Tu cuenta MotoSOS está activa y lista para ayudarte en cada viaje.</p>
           </header>
 
           <section className="confirmation-setup__success-card" aria-label="Activación completada">
@@ -336,21 +329,20 @@ export function ConfirmationSetup() {
         <header className="confirmation-setup__header">
           <p>Configuración inicial</p>
           <h1 id="confirmation-review-title">Revisa y confirma tu configuración</h1>
-          <span>
-            Verifica que la información esté correcta antes de activar completamente tu cuenta MotoSOS
-          </span>
+          <span>Verifica que la información esté correcta antes de activar completamente tu cuenta MotoSOS</span>
         </header>
 
         <div className="confirmation-setup__messages" aria-live="polite">
           {checkboxError ? (
             <AlertMessage variant="error">Debes confirmar que has revisado la información antes de activar tu cuenta.</AlertMessage>
           ) : null}
+          {activationError ? <AlertMessage variant="error">{activationError}</AlertMessage> : null}
         </div>
 
         <p className="confirmation-setup__notice">
           <Info aria-hidden="true" size={16} />
-          Antes de activar tu cuenta, revisa cada módulo. Si falta información, podrás corregirla
-          desde esta pantalla o más adelante desde el dashboard.
+          Antes de activar tu cuenta, revisa cada módulo. Si falta información, podrás corregirla desde esta pantalla o más adelante desde
+          el dashboard.
         </p>
 
         {validation && validation.blockingIssues.length > 0 ? (
@@ -367,11 +359,7 @@ export function ConfirmationSetup() {
                   <li className="confirmation-setup__blocking-item" key={issue}>
                     <CircleAlert aria-hidden="true" size={16} />
                     <span>{issue}</span>
-                    <Button
-                      onClick={() => module && handleFixModule(module)}
-                      type="button"
-                      variant="secondary"
-                    >
+                    <Button onClick={() => module && handleFixModule(module)} type="button" variant="secondary">
                       Corregir
                     </Button>
                   </li>
@@ -393,11 +381,7 @@ export function ConfirmationSetup() {
                 <AlertTriangle aria-hidden="true" size={16} />
                 Recomendaciones antes de activar
               </span>
-              <ChevronDown
-                aria-hidden="true"
-                className={areRecommendationsOpen ? "confirmation-setup__chevron--open" : ""}
-                size={16}
-              />
+              <ChevronDown aria-hidden="true" className={areRecommendationsOpen ? "confirmation-setup__chevron--open" : ""} size={16} />
             </button>
             {areRecommendationsOpen ? (
               <ul className="confirmation-setup__recommendations-list">
@@ -431,6 +415,7 @@ export function ConfirmationSetup() {
           <h2 id="confirmation-check-title">Confirmación de datos</h2>
           <Checkbox
             aria-describedby={checkboxError ? "confirmation-check-error" : "confirmation-check-hint"}
+            aria-invalid={checkboxError}
             checked={isCheckboxChecked}
             id="confirmation-checkbox"
             label="He revisado la información y confirmo que los datos son correctos"
@@ -447,8 +432,7 @@ export function ConfirmationSetup() {
         </section>
 
         <p className="confirmation-setup__privacy">
-          La información personal, de emergencia y de dispositivos se utilizará únicamente para operar
-          las funciones autorizadas de MotoSOS.
+          La información personal, de emergencia y de dispositivos se utilizará únicamente para operar las funciones autorizadas de MotoSOS.
         </p>
         <div className="confirmation-setup__privacy-links">
           <button onClick={() => setActiveModal("terminos")} type="button">
@@ -461,22 +445,11 @@ export function ConfirmationSetup() {
         </div>
 
         <section className="confirmation-setup__actions" aria-label="Acciones de confirmación">
-          <Button
-            disabled={isActivating}
-            onClick={() => navigate("/configuracion/plan")}
-            type="button"
-            variant="secondary"
-          >
+          <Button disabled={isActivating} onClick={() => navigate("/configuracion/plan")} type="button" variant="secondary">
             <ArrowLeft aria-hidden="true" size={16} />
             Anterior
           </Button>
-          <Button
-            disabled={!canActivate}
-            isLoading={isActivating}
-            loadingText="Activando cuenta..."
-            onClick={handleActivate}
-            type="button"
-          >
+          <Button disabled={!canActivate} isLoading={isActivating} loadingText="Activando cuenta..." onClick={handleActivate} type="button">
             Activar mi cuenta
           </Button>
         </section>

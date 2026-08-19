@@ -6,21 +6,21 @@ import { DeviceStatusCard } from "./DeviceStatusCard";
 
 interface SmartwatchStatusCardProps {
   isRefreshing: boolean;
-  isSimulating: boolean;
+  isCheckingStatus: boolean;
   mobileDevice: MobileDevice | null;
   onRefresh: (deviceId: string) => void;
   onRevoke: (device: LinkedDevice) => void;
-  onSimulate: () => void;
+  onCheckStatus: () => void;
   smartwatchDevice: SmartwatchDevice | null;
 }
 
 export function SmartwatchStatusCard({
   isRefreshing,
-  isSimulating,
+  isCheckingStatus,
   mobileDevice,
   onRefresh,
   onRevoke,
-  onSimulate,
+  onCheckStatus,
   smartwatchDevice,
 }: SmartwatchStatusCardProps) {
   if (smartwatchDevice) {
@@ -36,7 +36,7 @@ export function SmartwatchStatusCard({
     );
   }
 
-  const canSimulate = mobileDevice?.status === "linked";
+  const canCheckStatus = mobileDevice?.status === "linked";
 
   return (
     <article className="device-card device-card--pending" aria-labelledby="smartwatch-title">
@@ -51,14 +51,14 @@ export function SmartwatchStatusCard({
       <DeviceInstructions />
       <p className="device-card__note">La web no busca dispositivos Bluetooth ni se conecta directamente al reloj.</p>
       <Button
-        disabled={!canSimulate || isSimulating}
-        isLoading={isSimulating}
+        disabled={!canCheckStatus || isCheckingStatus}
+        isLoading={isCheckingStatus}
         loadingText="Consultando estado reportado por la app móvil..."
-        onClick={onSimulate}
+        onClick={onCheckStatus}
         type="button"
         variant="secondary"
       >
-        Simular smartwatch conectado
+        Consultar estado del smartwatch
       </Button>
     </article>
   );

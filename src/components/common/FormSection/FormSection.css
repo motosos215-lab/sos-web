@@ -1,11 +1,11 @@
 .form-section {
   display: grid;
-  gap: 1.1rem;
+  gap: var(--space-4);
   padding: clamp(1rem, 3vw, 1.4rem);
   background: var(--color-surface);
   border: 1px solid rgba(208, 213, 221, 0.72);
   border-radius: var(--radius-lg);
-  box-shadow: 0 12px 36px rgba(16, 24, 40, 0.06);
+  box-shadow: var(--shadow-soft);
 }
 
 .form-section__heading h2 {

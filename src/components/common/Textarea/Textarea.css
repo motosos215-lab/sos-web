@@ -1,32 +1,44 @@
 .textarea-field {
   display: grid;
-  gap: 0.45rem;
+  gap: var(--space-2);
+  min-width: 0;
 }
 
 .textarea-field__label {
   color: var(--color-text);
   font-size: 0.92rem;
-  font-weight: 700;
+  font-weight: 800;
 }
 
 .textarea-field__control {
   width: 100%;
   min-height: 112px;
-  padding: 0.75rem 0.9rem;
+  padding: 0.78rem 0.95rem;
   color: var(--color-text);
+  line-height: 1.5;
   resize: vertical;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
   outline: none;
   transition:
+    background-color 160ms ease,
     border-color 160ms ease,
     box-shadow 160ms ease;
 }
 
+.textarea-field__control::placeholder {
+  color: #8996a8;
+  opacity: 1;
+}
+
+.textarea-field__control:hover:not(:disabled) {
+  border-color: #b7c1d1;
+}
+
 .textarea-field__control:focus {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 4px rgba(25, 75, 204, 0.12);
+  border-color: var(--color-success);
+  box-shadow: var(--focus-ring);
 }
 
 .textarea-field__control[aria-invalid="true"] {
@@ -37,5 +49,6 @@
   margin: 0;
   color: var(--color-danger);
   font-size: 0.84rem;
-  font-weight: 600;
+  font-weight: 700;
+  line-height: 1.35;
 }

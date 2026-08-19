@@ -4,6 +4,8 @@ function profileDraftKeyFor(userId: string): string {
   return `motosos.profileDraft.${userId}`;
 }
 
+const draftsByUserId = new Map<string, DriverProfileDraft>();
+
 function resolveUserId(userId?: string): string | null {
   const resolved = userId ?? window.sessionStorage.getItem("motosos.currentUserId");
 
@@ -28,11 +30,7 @@ function isEmergencyContactDraft(value: unknown): value is EmergencyContactDraft
   }
 
   const contact = value as Partial<EmergencyContactDraft>;
-  return (
-    typeof contact.fullName === "string" &&
-    typeof contact.relationship === "string" &&
-    typeof contact.phone === "string"
-  );
+  return typeof contact.fullName === "string" && typeof contact.relationship === "string" && typeof contact.phone === "string";
 }
 
 function parseDraft(value: string): DriverProfileDraft | null {
@@ -91,7 +89,8 @@ export function saveDriverProfileDraft(userIdOrData: string | DriverProfileFormD
     emergencyContact: source.emergencyContact,
   };
 
-  window.sessionStorage.setItem(profileDraftKeyFor(userId), JSON.stringify(draft));
+  draftsByUserId.set(userId, draft);
+  window.sessionStorage.removeItem(profileDraftKeyFor(userId));
 }
 
 export function getDriverProfileDraft(userId?: string): DriverProfileDraft | null {
@@ -99,6 +98,12 @@ export function getDriverProfileDraft(userId?: string): DriverProfileDraft | nul
 
   if (!resolvedUserId) {
     return null;
+  }
+
+  const memoryDraft = draftsByUserId.get(resolvedUserId);
+
+  if (memoryDraft) {
+    return memoryDraft;
   }
 
   const storedDraft = window.sessionStorage.getItem(profileDraftKeyFor(resolvedUserId));
@@ -114,6 +119,7 @@ export function clearDriverProfileDraft(userId?: string) {
   const resolvedUserId = resolveUserId(userId);
 
   if (resolvedUserId) {
+    draftsByUserId.delete(resolvedUserId);
     window.sessionStorage.removeItem(profileDraftKeyFor(resolvedUserId));
   }
 }

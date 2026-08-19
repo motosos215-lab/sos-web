@@ -8,16 +8,10 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: "primary" | "secondary";
 }
 
-export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button({
-  children,
-  className = "",
-  disabled,
-  isLoading = false,
-  loadingText = "Procesando...",
-  type = "button",
-  variant = "primary",
-  ...props
-}, ref) {
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
+  { children, className = "", disabled, isLoading = false, loadingText = "Procesando...", type = "button", variant = "primary", ...props },
+  ref,
+) {
   return (
     <button
       aria-busy={isLoading}

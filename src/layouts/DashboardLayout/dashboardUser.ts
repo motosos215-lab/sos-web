@@ -1,12 +1,14 @@
 import type { UserRole } from "../../services/sessionService";
 
 export function getInitials(name: string) {
-  return name
-    .trim()
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part.charAt(0).toUpperCase())
-    .join("") || "MS";
+  return (
+    name
+      .trim()
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((part) => part.charAt(0).toUpperCase())
+      .join("") || "MS"
+  );
 }
 
 export function getRoleLabel(role: UserRole) {

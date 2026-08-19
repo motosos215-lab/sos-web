@@ -1,7 +1,19 @@
 const DEFAULT_TIMEOUT_MS = 15000;
 
+function usesSameOriginApiProxy(rawUrl: unknown): boolean {
+  if (typeof rawUrl === "string" && rawUrl.trim().replace(/\/+$/, "") === "/api") {
+    return true;
+  }
+
+  return typeof window !== "undefined" && window.location.hostname.endsWith("netlify.app");
+}
+
 function readBaseUrl(): string {
   const rawUrl = import.meta.env.VITE_API_BASE_URL ?? "";
+
+  if (usesSameOriginApiProxy(rawUrl)) {
+    return "";
+  }
 
   return typeof rawUrl === "string" ? rawUrl.trim().replace(/\/+$/, "") : "";
 }
@@ -28,5 +40,5 @@ export const apiConfig: ApiConfig = {
 };
 
 export function hasApiBaseUrl(): boolean {
-  return apiConfig.baseUrl.length > 0;
+  return usesSameOriginApiProxy(import.meta.env.VITE_API_BASE_URL) || apiConfig.baseUrl.length > 0;
 }

@@ -151,7 +151,10 @@ export function saveStoredDevicesState(userIdOrState: string | DevicesSetupState
 
 export function updateStoredDevicesState(userId: string, updates: Partial<DevicesSetupState>): DevicesSetupState;
 export function updateStoredDevicesState(updates: Partial<DevicesSetupState>): DevicesSetupState;
-export function updateStoredDevicesState(userIdOrUpdates: string | Partial<DevicesSetupState>, updates?: Partial<DevicesSetupState>): DevicesSetupState {
+export function updateStoredDevicesState(
+  userIdOrUpdates: string | Partial<DevicesSetupState>,
+  updates?: Partial<DevicesSetupState>,
+): DevicesSetupState {
   const userId = resolveUserId(typeof userIdOrUpdates === "string" ? userIdOrUpdates : undefined);
   const source = typeof userIdOrUpdates === "string" ? updates : userIdOrUpdates;
 

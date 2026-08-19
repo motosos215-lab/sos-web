@@ -28,8 +28,9 @@ export function InstructionsModal({ title, children, onClose }: InstructionsModa
         return;
       }
 
-      const focusableElements = Array.from(dialog.querySelectorAll<HTMLElement>("button, [tabindex]:not([tabindex='-1'])"))
-        .filter((element) => !element.hasAttribute("disabled"));
+      const focusableElements = Array.from(dialog.querySelectorAll<HTMLElement>("button, [tabindex]:not([tabindex='-1'])")).filter(
+        (element) => !element.hasAttribute("disabled"),
+      );
 
       if (focusableElements.length === 0) {
         return;
@@ -65,12 +66,7 @@ export function InstructionsModal({ title, children, onClose }: InstructionsModa
       >
         <div className="confirmation-modal__header">
           <h2 id="confirmation-modal-title">{title}</h2>
-          <button
-            aria-label="Cerrar"
-            className="confirmation-modal__close"
-            onClick={onClose}
-            type="button"
-          >
+          <button aria-label="Cerrar" className="confirmation-modal__close" onClick={onClose} type="button">
             <X aria-hidden="true" size={18} />
           </button>
         </div>

@@ -31,12 +31,7 @@ export function PasswordRequirements({ id, password }: PasswordRequirementsProps
         const isMet = requirement.test(password);
 
         return (
-          <li
-            className={`password-requirements__item ${
-              isMet ? "password-requirements__item--met" : ""
-            }`.trim()}
-            key={requirement.label}
-          >
+          <li className={`password-requirements__item ${isMet ? "password-requirements__item--met" : ""}`.trim()} key={requirement.label}>
             <span aria-hidden="true">{isMet ? "OK" : "-"}</span>
             {requirement.label}
           </li>

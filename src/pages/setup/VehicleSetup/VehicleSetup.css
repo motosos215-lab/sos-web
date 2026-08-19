@@ -1,6 +1,7 @@
 .vehicle-setup {
   display: grid;
-  gap: 1rem;
+  gap: var(--space-4);
+  min-width: 0;
 }
 
 .vehicle-setup__header {
@@ -17,7 +18,7 @@
 }
 
 .vehicle-setup__header p {
-  color: var(--color-primary);
+  color: var(--color-success-dark);
   font-size: 0.9rem;
   font-weight: 900;
 }
@@ -40,14 +41,15 @@
 .vehicle-setup__form,
 .vehicle-setup__column {
   display: grid;
-  gap: 1rem;
+  gap: var(--space-4);
+  min-width: 0;
 }
 
 .vehicle-setup__columns,
 .vehicle-setup__documents {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1rem;
+  gap: var(--space-4);
 }
 
 .vehicle-setup__hint {
@@ -120,23 +122,27 @@
     box-shadow 160ms ease;
 }
 
+.vehicle-type-selector__option:hover {
+  border-color: rgba(24, 169, 87, 0.45);
+}
+
 .vehicle-type-selector__option input {
   position: absolute;
   inset: 1rem 1rem auto auto;
   width: 18px;
   height: 18px;
-  accent-color: var(--color-primary);
+  accent-color: var(--color-success);
 }
 
 .vehicle-type-selector__option:focus-within {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 4px rgba(25, 75, 204, 0.12);
+  border-color: var(--color-success);
+  box-shadow: var(--focus-ring);
 }
 
 .vehicle-type-selector__option--selected {
-  color: var(--color-primary);
-  background: rgba(25, 75, 204, 0.06);
-  border-color: var(--color-primary);
+  color: var(--color-success-dark);
+  background: rgba(24, 169, 87, 0.08);
+  border-color: var(--color-success);
 }
 
 .vehicle-type-selector__icon {
@@ -153,8 +159,8 @@
 
 .vehicle-type-selector__option--selected .vehicle-type-selector__icon {
   color: var(--color-surface);
-  background: var(--color-primary);
-  border-color: var(--color-primary);
+  background: var(--color-success);
+  border-color: var(--color-success);
 }
 
 .vehicle-type-selector__content,

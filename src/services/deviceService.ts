@@ -6,140 +6,188 @@ import type {
   MobileDevice,
   SmartwatchDevice,
 } from "../types/device";
+import type { ApiResponse } from "../types/auth";
+import { api, unwrap } from "./api";
 import { getStoredDevicesState, saveStoredDevicesState, updateStoredDevicesState } from "./deviceStorageService";
-
-export interface DeviceDuplicateResponse {
-  success: boolean;
-  message: string;
-}
-
-const ACTIVATION_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-const ACTIVATION_DURATION_MS = 10 * 60 * 1000;
-const RESERVED_DUPLICATE_FINGERPRINT = "MOBILE-DUPLICATE-001";
-
-function wait(milliseconds: number) {
-  return new Promise((resolve) => {
-    window.setTimeout(resolve, milliseconds);
-  });
-}
-
-function getCryptoIndex(maxExclusive: number): number {
-  const values = new Uint32Array(1);
-  window.crypto.getRandomValues(values);
-  return values[0] % maxExclusive;
-}
-
-function generateCodeSegment(): string {
-  let segment = "";
-
-  for (let index = 0; index < 4; index += 1) {
-    segment += ACTIVATION_ALPHABET[getCryptoIndex(ACTIVATION_ALPHABET.length)];
-  }
-
-  return segment;
-}
-
-function buildActivationCode(): ActivationCode {
-  const code = [generateCodeSegment(), generateCodeSegment(), generateCodeSegment()].join("-");
-  const createdAt = new Date();
-  const expiresAt = new Date(createdAt.getTime() + ACTIVATION_DURATION_MS);
-
-  return {
-    code,
-    activationLink: `https://motosos.local/activar/${code}`,
-    createdAt: createdAt.toISOString(),
-    expiresAt: expiresAt.toISOString(),
-    status: "active",
-  };
-}
+import { getApiErrorMessage } from "../utils/apiErrors";
 
 function isActiveActivationCode(activationCode: ActivationCode | null): activationCode is ActivationCode {
-  return Boolean(
-    activationCode && activationCode.status === "active" && new Date(activationCode.expiresAt).getTime() > Date.now(),
-  );
+  return Boolean(activationCode && activationCode.status === "active" && new Date(activationCode.expiresAt).getTime() > Date.now());
 }
 
-function createMobileDevice(): MobileDevice {
-  const now = new Date().toISOString();
-
-  return {
-    id: "mobile-demo-001",
-    type: "mobile_app",
-    name: "Samsung Galaxy S23",
-    operatingSystem: "Android 14",
-    status: "linked",
-    batteryLevel: 78,
-    connectionQuality: "strong",
-    lastSynchronization: now,
-    linkedAt: now,
-  };
+interface ActivationCodeApiRecord {
+  code?: string;
+  expiresAtUtc?: string;
+  createdAtUtc?: string;
 }
 
-function createSmartwatchDevice(): SmartwatchDevice {
-  const now = new Date().toISOString();
-
-  return {
-    id: "watch-demo-001",
-    type: "smartwatch",
-    name: "MotoSOS Watch",
-    model: "Samsung Galaxy Watch 6",
-    operatingSystem: "Wear OS",
-    status: "linked",
-    batteryLevel: 64,
-    connectionQuality: "medium",
-    lastSynchronization: now,
-    linkedAt: now,
-  };
+interface DeviceApiRecord {
+  id?: string;
+  deviceType?: string;
+  type?: string;
+  deviceName?: string;
+  name?: string;
+  platform?: string;
+  manufacturer?: string;
+  model?: string;
+  operatingSystemVersion?: string;
+  status?: string;
+  connectionStatus?: string;
+  batteryLevel?: number | null;
+  lastHeartbeatAtUtc?: string | null;
+  lastSynchronization?: string | null;
+  linkedAtUtc?: string | null;
+  createdAtUtc?: string | null;
 }
 
-function nextBatteryLevel(device: LinkedDevice): number | null {
-  if (device.batteryLevel === null) {
+function readActivationCode(value: unknown): ActivationCode | null {
+  if (!value || typeof value !== "object") {
     return null;
   }
 
-  const reduction = device.type === "mobile_app" ? 1 : 2;
-  const minimum = device.type === "mobile_app" ? 72 : 58;
-  return Math.max(device.batteryLevel - reduction, minimum);
+  const source = value as { activationCode?: ActivationCodeApiRecord | null } & ActivationCodeApiRecord;
+  const record = source.activationCode ?? source;
+
+  if (!record?.code || !record.expiresAtUtc) {
+    return null;
+  }
+
+  return {
+    code: record.code,
+    activationLink: `${window.location.origin}/activar/${record.code}`,
+    createdAt: record.createdAtUtc ?? new Date().toISOString(),
+    expiresAt: record.expiresAtUtc,
+    status: new Date(record.expiresAtUtc).getTime() > Date.now() ? "active" : "expired",
+  };
+}
+
+function normalizeStatus(status: string | undefined): LinkedDevice["status"] {
+  switch (status?.toLowerCase()) {
+    case "linked":
+    case "active":
+    case "online":
+      return "linked";
+    case "offline":
+      return "offline";
+    case "revoked":
+      return "revoked";
+    case "pending":
+      return "pending";
+    default:
+      return "not_linked";
+  }
+}
+
+function normalizeConnection(status: string | undefined): LinkedDevice["connectionQuality"] {
+  switch (status?.toLowerCase()) {
+    case "online":
+    case "linked":
+    case "active":
+    case "strong":
+      return "strong";
+    case "medium":
+      return "medium";
+    case "weak":
+      return "weak";
+    default:
+      return "offline";
+  }
+}
+
+function toLinkedDevice(record: DeviceApiRecord): LinkedDevice | null {
+  if (!record.id) {
+    return null;
+  }
+
+  const rawType = (record.deviceType ?? record.type ?? "").toLowerCase();
+  const isSmartwatch = rawType.includes("watch");
+  const name = record.deviceName ?? record.name ?? (isSmartwatch ? "Smartwatch" : "App móvil");
+  const operatingSystem = [record.platform, record.operatingSystemVersion].filter(Boolean).join(" ") || record.platform || "Android";
+  const status = normalizeStatus(record.status ?? record.connectionStatus);
+  const connectionQuality = normalizeConnection(record.connectionStatus ?? record.status);
+  const lastSynchronization = record.lastHeartbeatAtUtc ?? record.lastSynchronization ?? null;
+  const linkedAt = record.linkedAtUtc ?? record.createdAtUtc ?? null;
+
+  if (isSmartwatch) {
+    return {
+      id: record.id,
+      type: "smartwatch",
+      name,
+      model: record.model ?? record.manufacturer ?? "Wear OS",
+      operatingSystem,
+      status,
+      batteryLevel: typeof record.batteryLevel === "number" ? record.batteryLevel : null,
+      connectionQuality,
+      lastSynchronization,
+      linkedAt,
+    };
+  }
+
+  return {
+    id: record.id,
+    type: "mobile_app",
+    name,
+    operatingSystem,
+    status,
+    batteryLevel: typeof record.batteryLevel === "number" ? record.batteryLevel : null,
+    connectionQuality,
+    lastSynchronization,
+    linkedAt,
+  };
+}
+
+function readDevices(value: unknown): LinkedDevice[] {
+  const records =
+    value && typeof value === "object" && Array.isArray((value as { devices?: unknown[] }).devices)
+      ? (value as { devices: DeviceApiRecord[] }).devices
+      : Array.isArray(value)
+        ? (value as DeviceApiRecord[])
+        : [];
+
+  return records.map(toLinkedDevice).filter((device): device is LinkedDevice => Boolean(device));
+}
+
+function toDevicesState(devices: LinkedDevice[], activationCode = getStoredDevicesState().activationCode): DevicesSetupState {
+  return saveStoredDevicesState({
+    activationCode,
+    mobileDevice: devices.find((device): device is MobileDevice => device.type === "mobile_app") ?? null,
+    smartwatchDevice: devices.find((device): device is SmartwatchDevice => device.type === "smartwatch") ?? null,
+  });
 }
 
 export async function generateMobileActivationCode(): Promise<DeviceServiceResponse<ActivationCode>> {
-  await wait(600);
   const state = getStoredDevicesState();
 
   if (state.mobileDevice?.status === "linked") {
     return { success: false, message: "Ya existe una aplicación móvil vinculada", data: null };
   }
 
-  const activationCode = buildActivationCode();
-  updateStoredDevicesState({ activationCode });
+  try {
+    const response = await api.post<ApiResponse<unknown>>("/api/v1/devices/mobile/activation-code");
+    const activationCode = readActivationCode(unwrap<unknown>(response));
 
-  return {
-    success: true,
-    message: "Código de activación generado correctamente",
-    data: activationCode,
-  };
+    if (!activationCode) {
+      return { success: false, message: "No pudimos leer el código de activación", data: null };
+    }
+
+    updateStoredDevicesState({ activationCode });
+
+    return {
+      success: true,
+      message: "Código de activación generado correctamente",
+      data: activationCode,
+    };
+  } catch (error) {
+    return { success: false, message: getApiErrorMessage(error), data: null };
+  }
 }
 
 export async function regenerateMobileActivationCode(): Promise<DeviceServiceResponse<ActivationCode>> {
-  await wait(600);
-  const state = getStoredDevicesState();
-
-  if (state.mobileDevice?.status === "linked") {
-    return { success: false, message: "Ya existe una aplicación móvil vinculada", data: null };
-  }
-
-  const activationCode = buildActivationCode();
-  updateStoredDevicesState({ activationCode });
-
-  return {
-    success: true,
-    message: "Se generó un nuevo código de activación",
-    data: activationCode,
-  };
+  const response = await generateMobileActivationCode();
+  return response.success ? { ...response, message: "Se generó un nuevo código de activación" } : response;
 }
 
-export async function simulateMobileAppLink(code: string): Promise<DeviceServiceResponse<DevicesSetupState>> {
-  await wait(800);
+export async function linkMobileApp(code: string): Promise<DeviceServiceResponse<DevicesSetupState>> {
   const state = getStoredDevicesState();
 
   if (state.mobileDevice?.status === "linked") {
@@ -150,95 +198,99 @@ export async function simulateMobileAppLink(code: string): Promise<DeviceService
     return { success: false, message: "El código de activación no está disponible", data: state };
   }
 
-  const nextState = saveStoredDevicesState({
-    activationCode: { ...state.activationCode, status: "used" },
-    mobileDevice: createMobileDevice(),
-    smartwatchDevice: state.smartwatchDevice,
-  });
+  try {
+    const response = await api.post<ApiResponse<unknown>>("/api/v1/devices/mobile/link", {
+      code,
+      deviceName: "MotoSOS Web Android",
+      platform: "Android",
+      manufacturer: "MotoSOS",
+      model: "Web Link",
+      operatingSystemVersion: "14",
+      appVersion: "1.0.0",
+      deviceIdentifier: `web-${crypto.randomUUID()}`,
+    });
+    const data = unwrap<unknown>(response);
+    const device = toLinkedDevice(
+      (data && typeof data === "object" && "device" in data ? (data as { device: DeviceApiRecord }).device : data) as DeviceApiRecord,
+    );
 
-  return { success: true, message: "Aplicación móvil vinculada correctamente", data: nextState };
+    if (!device || device.type !== "mobile_app") {
+      return { success: false, message: "No pudimos confirmar la vinculación móvil", data: state };
+    }
+
+    const nextState = saveStoredDevicesState({
+      activationCode: { ...state.activationCode, status: "used" },
+      mobileDevice: device,
+      smartwatchDevice: state.smartwatchDevice,
+    });
+
+    return { success: true, message: "Aplicación móvil vinculada correctamente", data: nextState };
+  } catch (error) {
+    return { success: false, message: getApiErrorMessage(error), data: state };
+  }
 }
 
 export async function getLinkedDevices(): Promise<DeviceServiceResponse<DevicesSetupState>> {
-  await wait(300);
-  return { success: true, message: "Dispositivos consultados correctamente", data: getStoredDevicesState() };
+  try {
+    const [devicesResponse, codeResponse] = await Promise.allSettled([
+      api.get<ApiResponse<unknown>>("/api/v1/devices"),
+      api.get<ApiResponse<unknown>>("/api/v1/devices/activation-codes/current"),
+    ]);
+
+    if (devicesResponse.status === "rejected") {
+      throw devicesResponse.reason;
+    }
+
+    let activationCode: ActivationCode | null = null;
+
+    if (codeResponse.status === "fulfilled") {
+      try {
+        activationCode = readActivationCode(unwrap<unknown>(codeResponse.value));
+      } catch {
+        activationCode = null;
+      }
+    }
+
+    const state = toDevicesState(readDevices(unwrap<unknown>(devicesResponse.value)), activationCode);
+
+    return { success: true, message: "Dispositivos consultados correctamente", data: state };
+  } catch (error) {
+    return { success: false, message: getApiErrorMessage(error), data: getStoredDevicesState() };
+  }
 }
 
-export async function simulateSmartwatchStatus(): Promise<DeviceServiceResponse<SmartwatchDevice>> {
-  await wait(800);
+export async function checkSmartwatchStatus(): Promise<DeviceServiceResponse<SmartwatchDevice>> {
   const state = getStoredDevicesState();
 
   if (state.mobileDevice?.status !== "linked") {
     return { success: false, message: "Vincula la app móvil antes de consultar el smartwatch", data: null };
   }
 
-  const smartwatchDevice = createSmartwatchDevice();
-  updateStoredDevicesState({ smartwatchDevice });
-
-  return { success: true, message: "Estado de smartwatch reportado por la app móvil", data: smartwatchDevice };
+  return { success: false, message: "El smartwatch se vincula desde la app móvil Android", data: null };
 }
 
 export async function refreshDeviceStatus(deviceId: string): Promise<DeviceServiceResponse<LinkedDevice>> {
-  await wait(600);
-  const state = getStoredDevicesState();
-  const device = state.mobileDevice?.id === deviceId ? state.mobileDevice : state.smartwatchDevice?.id === deviceId ? state.smartwatchDevice : null;
+  const response = await getLinkedDevices();
+  const device =
+    response.data?.mobileDevice?.id === deviceId
+      ? response.data.mobileDevice
+      : response.data?.smartwatchDevice?.id === deviceId
+        ? response.data.smartwatchDevice
+        : null;
 
-  if (!device || device.status === "revoked") {
-    return { success: false, message: "No encontramos el dispositivo", data: null };
-  }
-
-  const updatedDevice: LinkedDevice = {
-    ...device,
-    batteryLevel: nextBatteryLevel(device),
-    lastSynchronization: new Date().toISOString(),
-  };
-
-  if (updatedDevice.type === "mobile_app") {
-    updateStoredDevicesState({ mobileDevice: updatedDevice });
-  } else {
-    updateStoredDevicesState({ smartwatchDevice: updatedDevice });
-  }
-
-  return { success: true, message: "Estado actualizado correctamente", data: updatedDevice };
+  return device
+    ? { success: true, message: "Estado actualizado correctamente", data: device }
+    : { success: false, message: response.message || "No encontramos el dispositivo", data: null };
 }
 
 export async function revokeDevice(deviceId: string): Promise<DeviceServiceResponse<DevicesSetupState>> {
-  await wait(500);
   const state = getStoredDevicesState();
-
-  if (state.mobileDevice?.id === deviceId) {
-    const nextState = saveStoredDevicesState({
-      activationCode: null,
-      mobileDevice: { ...state.mobileDevice, status: "revoked", connectionQuality: "offline" },
-      smartwatchDevice: state.smartwatchDevice
-        ? { ...state.smartwatchDevice, status: "revoked", connectionQuality: "offline" }
-        : null,
-    });
-
-    return { success: true, message: "Dispositivo revocado correctamente", data: nextState };
+  try {
+    const response = await api.post<ApiResponse<unknown>>(`/api/v1/devices/${deviceId}/revoke`);
+    unwrap<unknown>(response);
+    const nextState = await getLinkedDevices();
+    return { success: true, message: "Dispositivo revocado correctamente", data: nextState.data ?? state };
+  } catch (error) {
+    return { success: false, message: getApiErrorMessage(error), data: state };
   }
-
-  if (state.smartwatchDevice?.id === deviceId) {
-    const nextState = saveStoredDevicesState({
-      ...state,
-      smartwatchDevice: { ...state.smartwatchDevice, status: "revoked", connectionQuality: "offline" },
-    });
-
-    return { success: true, message: "Dispositivo revocado correctamente", data: nextState };
-  }
-
-  return { success: false, message: "No encontramos el dispositivo", data: state };
-}
-
-export async function checkDeviceDuplicate(deviceFingerprint: string): Promise<DeviceDuplicateResponse> {
-  await wait(350);
-
-  if (deviceFingerprint === RESERVED_DUPLICATE_FINGERPRINT) {
-    return {
-      success: false,
-      message: "Este dispositivo ya está vinculado a una cuenta MotoSOS",
-    };
-  }
-
-  return { success: true, message: "Dispositivo disponible para vinculación" };
 }

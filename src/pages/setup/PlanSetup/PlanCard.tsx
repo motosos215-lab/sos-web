@@ -45,12 +45,7 @@ export function PlanCard({
   return (
     <article
       aria-label={`${plan.name}${isCurrentPlan ? ", plan activo" : ", disponible para mejorar en la app"}`}
-      className={[
-        "plan-card",
-        `plan-card--theme-${plan.id}`,
-        isCurrentPlan ? "plan-card--current" : "",
-        isWide ? "plan-card--wide" : "",
-      ]
+      className={["plan-card", `plan-card--theme-${plan.id}`, isCurrentPlan ? "plan-card--current" : "", isWide ? "plan-card--wide" : ""]
         .filter(Boolean)
         .join(" ")}
     >

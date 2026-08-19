@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Bell, CircleCheck } from "lucide-react";
+import { Bell } from "lucide-react";
 import { Button } from "../../components/common/Button/Button";
 
 interface NotificationsPopoverProps {
@@ -10,6 +10,11 @@ interface NotificationsPopoverProps {
 export function NotificationsPopover({ onClose }: NotificationsPopoverProps) {
   const navigate = useNavigate();
   const panelRef = useRef<HTMLDivElement | null>(null);
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     const firstButton = panelRef.current?.querySelector<HTMLButtonElement>("button");
@@ -17,20 +22,21 @@ export function NotificationsPopover({ onClose }: NotificationsPopoverProps) {
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
-        onClose();
+        onCloseRef.current();
       }
     };
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [onClose]);
+  }, []);
 
   return (
     <section className="notifications-popover" aria-label="Notificaciones recientes" ref={panelRef}>
       <h2>Notificaciones</h2>
       <ul>
-        <li><Bell aria-hidden="true" size={16} /> Nuevo incidente crítico detectado</li>
-        <li><CircleCheck aria-hidden="true" size={16} /> Un contacto confirmó la recepción de una alerta</li>
+        <li>
+          <Bell aria-hidden="true" size={16} /> Revisa el historial real de entregas y preferencias.
+        </li>
       </ul>
       <Button
         onClick={() => {

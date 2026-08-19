@@ -7,8 +7,8 @@ import { Checkbox } from "../../../components/common/Checkbox/Checkbox";
 import { Input } from "../../../components/common/Input/Input";
 import { PasswordInput } from "../../../components/common/PasswordInput/PasswordInput";
 import { AuthLayout } from "../../../layouts/AuthLayout/AuthLayout";
-import { login } from "../../../services/authService";
-import { getSetupStepPath } from "../../../config/setupSteps";
+import { login, requestAccessCode } from "../../../services/authService";
+import { resolveOnboardingRoute } from "../../../services/onboardingService";
 import { getApiErrorMessage } from "../../../utils/apiErrors";
 import "./Login.css";
 
@@ -26,6 +26,7 @@ interface LoginFormErrors {
 
 interface LoginLocationState {
   message?: string;
+  redirectTo?: string;
 }
 
 const initialValues: LoginFormValues = {
@@ -53,6 +54,14 @@ function validateLogin(values: LoginFormValues): LoginFormErrors {
   return errors;
 }
 
+function getSafeRedirectPath(value: unknown): string | null {
+  if (typeof value !== "string" || !value.startsWith("/") || value.startsWith("//")) {
+    return null;
+  }
+
+  return value;
+}
+
 export function Login() {
   const location = useLocation();
   const navigate = useNavigate();
@@ -60,10 +69,8 @@ export function Login() {
   const [values, setValues] = useState<LoginFormValues>(initialValues);
   const [errors, setErrors] = useState<LoginFormErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [accessCodePending, setAccessCodePending] = useState(false);
-  const [successMessage, setSuccessMessage] = useState(
-    typeof state?.message === "string" ? state.message : "",
-  );
+  const [isRequestingCode, setIsRequestingCode] = useState(false);
+  const [successMessage, setSuccessMessage] = useState(typeof state?.message === "string" ? state.message : "");
 
   useEffect(() => {
     if (typeof state?.message === "string") {
@@ -90,15 +97,22 @@ export function Login() {
 
     try {
       const session = await login({
-        email: values.email.trim(),
+        email: values.email.trim().toLowerCase(),
         password: values.password,
         rememberMe: values.remember,
       });
 
       setSuccessMessage("Inicio de sesión correcto");
 
+      const redirectTo = getSafeRedirectPath(state?.redirectTo);
+
+      if (redirectTo) {
+        navigate(redirectTo, { replace: true });
+        return;
+      }
+
       if (session.role === "conductor" && !session.setupCompleted) {
-        navigate(getSetupStepPath(session.currentSetupStep));
+        navigate(resolveOnboardingRoute(session.onboardingStatusSnapshot ?? {}, session));
         return;
       }
 
@@ -110,8 +124,30 @@ export function Login() {
     }
   };
 
-  const handleAccessCode = () => {
-    setAccessCodePending(true);
+  const handleAccessCode = async () => {
+    if (isRequestingCode) {
+      return;
+    }
+
+    const email = values.email.trim().toLowerCase();
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!emailPattern.test(email)) {
+      setErrors({ email: "Ingresa tu correo para enviarte el código de acceso." });
+      return;
+    }
+
+    setErrors({});
+    setIsRequestingCode(true);
+
+    try {
+      await requestAccessCode(email);
+      navigate("/verificar-cuenta", { state: { email } });
+    } catch (error) {
+      setErrors({ form: getApiErrorMessage(error) });
+    } finally {
+      setIsRequestingCode(false);
+    }
   };
 
   return (
@@ -128,9 +164,12 @@ export function Login() {
           {errors.form ? <AlertMessage variant="error">{errors.form}</AlertMessage> : null}
 
           <Input
+            autoCapitalize="none"
             autoComplete="email"
+            autoCorrect="off"
             error={errors.email}
             id="email"
+            inputMode="email"
             label="Correo electrónico"
             name="email"
             onChange={(event) => {
@@ -139,13 +178,16 @@ export function Login() {
                 setErrors((current) => ({ ...current, email: undefined }));
               }
             }}
-            placeholder="tu@email.com"
+            placeholder="ejemplo@correo.com"
+            spellCheck={false}
             type="email"
             value={values.email}
           />
 
           <PasswordInput
+            autoCapitalize="none"
             autoComplete="current-password"
+            autoCorrect="off"
             error={errors.password}
             id="password"
             label="Contraseña"
@@ -156,7 +198,8 @@ export function Login() {
                 setErrors((current) => ({ ...current, password: undefined }));
               }
             }}
-            placeholder="Mínimo 8 caracteres"
+            placeholder="Ej. MotoSOS2026"
+            spellCheck={false}
             value={values.password}
           />
 
@@ -166,16 +209,14 @@ export function Login() {
               id="remember"
               label="Recordarme"
               name="remember"
-              onChange={(event) =>
-                setValues((current) => ({ ...current, remember: event.target.checked }))
-              }
+              onChange={(event) => setValues((current) => ({ ...current, remember: event.target.checked }))}
             />
-            <Link className="login-form__link" to="/recuperar-contrasena">
+            <Link className="login-form__link" to="/forgot-password">
               ¿Olvidaste tu contraseña?
             </Link>
           </div>
 
-          <Button isLoading={isSubmitting} loadingText="Iniciando sesión..." type="submit">
+          <Button disabled={isRequestingCode} isLoading={isSubmitting} loadingText="Iniciando sesión..." type="submit">
             Iniciar sesión
           </Button>
 
@@ -186,22 +227,20 @@ export function Login() {
           <span>o</span>
         </div>
 
-        <Button onClick={handleAccessCode} variant="secondary">
+        <Button
+          disabled={isSubmitting}
+          isLoading={isRequestingCode}
+          loadingText="Enviando código..."
+          onClick={handleAccessCode}
+          variant="secondary"
+        >
           Continuar con código de acceso
         </Button>
 
-        {accessCodePending ? (
-          <AlertMessage variant="info">
-            Esta opción estará disponible próximamente.
-          </AlertMessage>
-        ) : null}
-
-        <p className="login-card__note">
-          Si eres conductor, monitor o administrador, accede con tu cuenta MotoSOS.
-        </p>
+        <p className="login-card__note">Si eres conductor, monitor o administrador, accede con tu cuenta MotoSOS.</p>
 
         <p className="login-card__footer">
-          ¿No tienes cuenta? <Link to="/registro">Crear cuenta</Link>
+          ¿No tienes cuenta? <Link to="/register">Crear cuenta</Link>
         </p>
       </section>
     </AuthLayout>

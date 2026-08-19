@@ -8,7 +8,7 @@ import { Select, type SelectOption } from "../../../components/common/Select/Sel
 import { SetupLayout } from "../../../layouts/SetupLayout/SetupLayout";
 import { clearVehicleDraft, getVehicleDraft, saveVehicleDraft } from "../../../services/vehicleDraftService";
 import { checkVehicleAvailability, saveVehicle } from "../../../services/vehicleService";
-import { getActiveUserId, getSession, updateSession } from "../../../services/sessionService";
+import { getSession, updateSession } from "../../../services/sessionService";
 import type { VehicleFormData, VehicleMainUse, VehicleType, VehicleUseFrequency } from "../../../types/vehicle";
 import { FormErrorSummary } from "./FormErrorSummary";
 import { VehicleDocumentsSection } from "./VehicleDocumentsSection";
@@ -84,15 +84,9 @@ const frequencyOptions: SelectOption[] = [
   { label: "Ocasionalmente", value: "ocasional" },
 ];
 
-const cityOptions: SelectOption[] = [
-  "Tula de Allende",
-  "Pachuca",
-  "Ciudad de México",
-  "Querétaro",
-  "Puebla",
-  "Toluca",
-  "Otra",
-].map((value) => ({ label: value, value }));
+const cityOptions: SelectOption[] = ["Tula de Allende", "Pachuca", "Ciudad de México", "Querétaro", "Puebla", "Toluca", "Otra"].map(
+  (value) => ({ label: value, value }),
+);
 
 const fieldLabels: Partial<Record<string, string>> = {
   vehicleType: "Tipo de vehículo",
@@ -263,16 +257,30 @@ export function VehicleSetup() {
   }, []);
 
   const updateField = <Field extends keyof VehicleFormData>(field: Field, value: VehicleFormData[Field]) => {
-    setFormData((current) => ({ ...current, [field]: value }));
-    setErrors((current) => ({ ...current, [field]: undefined, form: undefined }));
+    setFormData((current) => {
+      const next = { ...current, [field]: value };
+
+      if (field === "brand" && value !== "Otra") {
+        next.customBrand = "";
+      }
+
+      if (field === "circulationCity" && value !== "Otra") {
+        next.customCirculationCity = "";
+      }
+
+      return next;
+    });
+    setErrors((current) => ({
+      ...current,
+      [field]: undefined,
+      ...(field === "brand" && value !== "Otra" ? { customBrand: undefined } : {}),
+      ...(field === "circulationCity" && value !== "Otra" ? { customCirculationCity: undefined } : {}),
+      form: undefined,
+    }));
     setSuccessMessage("");
   };
 
-  const handleFileChange = (
-    field: "vehiclePhoto" | "registrationDocument",
-    file: File | null,
-    error?: string,
-  ) => {
+  const handleFileChange = (field: "vehiclePhoto" | "registrationDocument", file: File | null, error?: string) => {
     updateField(field, file);
     setErrors((current) => ({ ...current, [field]: error, form: undefined }));
   };
@@ -362,7 +370,9 @@ export function VehicleSetup() {
           {errors.form ? <AlertMessage variant="error">{errors.form}</AlertMessage> : null}
           {infoMessage ? <AlertMessage variant="info">{infoMessage}</AlertMessage> : null}
           {hasRegisteredVehicle ? (
-            <AlertMessage variant="warning">Ya registraste el vehículo permitido por tu plan. Puedes editar el vehículo existente.</AlertMessage>
+            <AlertMessage variant="warning">
+              Ya registraste el vehículo permitido por tu plan. Puedes editar el vehículo existente.
+            </AlertMessage>
           ) : (
             <AlertMessage variant="info">Tu plan Básico permite registrar un vehículo.</AlertMessage>
           )}
@@ -389,7 +399,7 @@ export function VehicleSetup() {
                   name="brand"
                   onChange={(event) => updateField("brand", event.target.value)}
                   options={brandOptions}
-                  placeholder="Selecciona la marca"
+                  placeholder="Ej. Italika"
                   value={formData.brand}
                 />
                 {formData.brand === "Otra" ? (
@@ -401,6 +411,7 @@ export function VehicleSetup() {
                     maxLength={50}
                     name="customBrand"
                     onChange={(event) => updateField("customBrand", event.target.value)}
+                    placeholder="Ej. Vento"
                     type="text"
                     value={formData.customBrand}
                   />
@@ -413,6 +424,7 @@ export function VehicleSetup() {
                   maxLength={50}
                   name="model"
                   onChange={(event) => updateField("model", event.target.value)}
+                  placeholder="Ej. FT150"
                   type="text"
                   value={formData.model}
                 />
@@ -424,7 +436,7 @@ export function VehicleSetup() {
                   name="year"
                   onChange={(event) => updateField("year", event.target.value ? Number(event.target.value) : "")}
                   options={yearOptions}
-                  placeholder="Selecciona el año"
+                  placeholder="Ej. 2024"
                   value={formData.year}
                 />
                 <div>
@@ -437,10 +449,13 @@ export function VehicleSetup() {
                     maxLength={40}
                     name="alias"
                     onChange={(event) => updateField("alias", event.target.value)}
+                    placeholder="Ej. Moto diaria"
                     type="text"
                     value={formData.alias}
                   />
-                  <p className="vehicle-setup__hint" id="alias-help">Este alias te ayudará a identificar tu vehículo fácilmente.</p>
+                  <p className="vehicle-setup__hint" id="alias-help">
+                    Este alias te ayudará a identificar tu vehículo fácilmente.
+                  </p>
                 </div>
               </div>
 
@@ -453,6 +468,7 @@ export function VehicleSetup() {
                   maxLength={30}
                   name="color"
                   onChange={(event) => updateField("color", event.target.value)}
+                  placeholder="Ej. Negro mate"
                   type="text"
                   value={formData.color}
                 />
@@ -467,10 +483,13 @@ export function VehicleSetup() {
                     name="licensePlate"
                     onBlur={() => updateField("licensePlate", formData.licensePlate.trim().toUpperCase())}
                     onChange={(event) => updateField("licensePlate", event.target.value.toUpperCase())}
+                    placeholder="Ej. ABC-123"
                     type="text"
                     value={formData.licensePlate}
                   />
-                  <p className="vehicle-setup__hint" id="licensePlate-help">Escribe la placa sin espacios innecesarios.</p>
+                  <p className="vehicle-setup__hint" id="licensePlate-help">
+                    Escribe la placa sin espacios innecesarios.
+                  </p>
                 </div>
                 <div>
                   <Input
@@ -483,16 +502,22 @@ export function VehicleSetup() {
                     name="vinOrSerialNumber"
                     onBlur={() => updateField("vinOrSerialNumber", formData.vinOrSerialNumber.replace(/\s/g, "").toUpperCase())}
                     onChange={(event) => updateField("vinOrSerialNumber", event.target.value.toUpperCase().replace(/\s/g, ""))}
+                    placeholder="Ej. 3H1PCX2A9LD123456"
                     type="text"
                     value={formData.vinOrSerialNumber}
                   />
-                  <p className="vehicle-setup__hint" id="vinOrSerialNumber-help">Puedes encontrarlo en el chasis o en la tarjeta de circulación.</p>
+                  <p className="vehicle-setup__hint" id="vinOrSerialNumber-help">
+                    Puedes encontrarlo en el chasis o en la tarjeta de circulación.
+                  </p>
                 </div>
               </div>
             </div>
           </FormSection>
 
-          <FormSection title="Uso del vehículo" description="Indica cómo usas normalmente este vehículo para contextualizar tus viajes monitoreados.">
+          <FormSection
+            title="Uso del vehículo"
+            description="Indica cómo usas normalmente este vehículo para contextualizar tus viajes monitoreados."
+          >
             <div className="vehicle-setup__columns">
               <div className="vehicle-setup__column">
                 <Select
@@ -503,7 +528,7 @@ export function VehicleSetup() {
                   name="mainUse"
                   onChange={(event) => updateField("mainUse", event.target.value as VehicleMainUse | "")}
                   options={mainUseOptions}
-                  placeholder="Selecciona el uso principal"
+                  placeholder="Ej. Trabajo"
                   value={formData.mainUse}
                 />
                 <Select
@@ -514,7 +539,7 @@ export function VehicleSetup() {
                   name="circulationCity"
                   onChange={(event) => updateField("circulationCity", event.target.value)}
                   options={cityOptions}
-                  placeholder="Selecciona la ciudad"
+                  placeholder="Ej. Pachuca"
                   value={formData.circulationCity}
                 />
                 {formData.circulationCity === "Otra" ? (
@@ -526,6 +551,7 @@ export function VehicleSetup() {
                     maxLength={60}
                     name="customCirculationCity"
                     onChange={(event) => updateField("customCirculationCity", event.target.value)}
+                    placeholder="Ej. Tulancingo"
                     type="text"
                     value={formData.customCirculationCity}
                   />
@@ -541,7 +567,7 @@ export function VehicleSetup() {
                   name="useFrequency"
                   onChange={(event) => updateField("useFrequency", event.target.value as VehicleUseFrequency | "")}
                   options={frequencyOptions}
-                  placeholder="Selecciona la frecuencia"
+                  placeholder="Ej. Diario"
                   value={formData.useFrequency}
                 />
               </div>
@@ -561,9 +587,13 @@ export function VehicleSetup() {
           />
 
           <div className="vehicle-setup__actions">
-            <Button onClick={handleSaveDraft} type="button" variant="secondary">Guardar borrador</Button>
+            <Button onClick={handleSaveDraft} type="button" variant="secondary">
+              Guardar borrador
+            </Button>
             <div>
-              <Button onClick={handleBack} type="button" variant="secondary">Volver</Button>
+              <Button onClick={handleBack} type="button" variant="secondary">
+                Volver
+              </Button>
               <Button disabled={isSubmitting} isLoading={isSubmitting} loadingText="Guardando vehículo..." type="submit">
                 Guardar y continuar
               </Button>

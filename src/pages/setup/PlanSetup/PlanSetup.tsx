@@ -14,6 +14,7 @@ import {
   refreshPlanStatus,
 } from "../../../services/planService";
 import type { MotoSosPlan, UserPlanState } from "../../../types/plan";
+import { getApiErrorMessage } from "../../../utils/apiErrors";
 import { PlanDetailsAccordion } from "./PlanDetailsAccordion";
 import { PlanPagination } from "./PlanPagination";
 import { BusinessLicenseNotice, EssentialSecurityNotice, PaymentInformationCard, PlanLimitWarning } from "./PlanSupportCards";
@@ -35,7 +36,7 @@ function getLimitWarning(currentPlan: UserPlanState | null) {
   const exceedsDrivers = currentPlan.driverLimit !== null && driverCount > currentPlan.driverLimit;
 
   if (exceedsContacts || exceedsVehicles || exceedsDrivers) {
-    return "El estado actual supera los límites del plan Básico. Revisa los datos simulados antes de continuar";
+    return "El estado actual supera los límites del plan Básico. Revisa tus datos antes de continuar";
   }
 
   return "";
@@ -60,13 +61,7 @@ export function PlanSetup() {
   const session = getSession();
   const accountStatus = session?.accountStatus ?? "active";
   const limitWarning = getLimitWarning(currentPlan);
-  const canContinue = Boolean(
-    (!currentPlan || currentPlan.status === "active") &&
-      !limitWarning &&
-      session?.devicesConfigured &&
-      session.mobileDeviceLinked &&
-      session.currentSetupStep === "plan",
-  );
+  const canContinue = Boolean((!currentPlan || currentPlan.status === "active") && !limitWarning);
 
   const loadPlans = async () => {
     setIsLoading(true);
@@ -76,14 +71,14 @@ export function PlanSetup() {
       const [plansResponse, currentPlanResponse] = await Promise.all([getAvailablePlans(), getCurrentPlan()]);
 
       if (!plansResponse.success || !plansResponse.data || !currentPlanResponse.success) {
-        setErrorMessage("No pudimos cargar los planes");
+        setErrorMessage(plansResponse.message || currentPlanResponse.message || "No pudimos cargar los planes");
         return;
       }
 
       setPlans(plansResponse.data);
       setCurrentPlan(currentPlanResponse.data);
-    } catch {
-      setErrorMessage("No pudimos cargar los planes");
+    } catch (error) {
+      setErrorMessage(getApiErrorMessage(error));
     } finally {
       setIsLoading(false);
     }
@@ -101,15 +96,15 @@ export function PlanSetup() {
     try {
       const response = await refreshPlanStatus();
       if (!response.success || !response.data) {
-        setErrorMessage("No pudimos actualizar el estado del plan");
+        setErrorMessage(response.message || "No pudimos actualizar el estado del plan");
         return;
       }
 
       setCurrentPlan(response.data);
       setLastRefresh(new Intl.DateTimeFormat("es-MX", { timeStyle: "short" }).format(new Date()));
       setSuccessMessage("El estado del plan está actualizado");
-    } catch {
-      setErrorMessage("No pudimos actualizar el estado del plan");
+    } catch (error) {
+      setErrorMessage(getApiErrorMessage(error));
     } finally {
       setIsRefreshing(false);
     }
@@ -137,7 +132,7 @@ export function PlanSetup() {
     setErrorMessage("");
 
     if (!canContinue) {
-      setErrorMessage(limitWarning || "Confirma que el plan esté activo, la app móvil vinculada y que sigues en el paso Plan y licencia.");
+      setErrorMessage(limitWarning || "Confirma que el plan Básico esté activo para continuar.");
       return;
     }
 
@@ -163,8 +158,8 @@ export function PlanSetup() {
       });
       setSuccessMessage(response.message);
       window.setTimeout(() => navigate("/configuracion/confirmacion"), 650);
-    } catch {
-      setErrorMessage("No pudimos confirmar el plan. Inténtalo nuevamente.");
+    } catch (error) {
+      setErrorMessage(getApiErrorMessage(error));
     } finally {
       setIsSubmitting(false);
     }
@@ -188,15 +183,21 @@ export function PlanSetup() {
         </div>
 
         {isLoading ? (
-          <section className="plan-setup__loading" aria-live="polite">Cargando planes...</section>
+          <section className="plan-setup__loading" aria-live="polite">
+            Cargando planes...
+          </section>
         ) : errorMessage && plans.length === 0 ? (
           <section className="plan-setup__empty" aria-live="assertive">
             <h2>No pudimos cargar los planes</h2>
-            <Button onClick={loadPlans} type="button">Reintentar</Button>
+            <Button onClick={loadPlans} type="button">
+              Reintentar
+            </Button>
           </section>
         ) : (
           <>
-            {!currentPlan ? <AlertMessage variant="warning">No se encontró un plan activo. Puedes confirmar Básico para continuar.</AlertMessage> : null}
+            {!currentPlan ? (
+              <AlertMessage variant="warning">No se encontró un plan activo. Puedes confirmar Básico para continuar.</AlertMessage>
+            ) : null}
             {limitWarning ? <PlanLimitWarning message={limitWarning} /> : null}
 
             <EssentialSecurityNotice />
@@ -207,11 +208,7 @@ export function PlanSetup() {
                 <h2 id="plans-title">Compara beneficios y límites</h2>
               </div>
               <div className="plan-setup__pager">
-                <PlanPagination
-                  currentPlanId={currentPlan?.currentPlan ?? "basico"}
-                  onUpgrade={setSelectedUpgradePlan}
-                  plans={plans}
-                />
+                <PlanPagination currentPlanId={currentPlan?.currentPlan ?? "basico"} onUpgrade={setSelectedUpgradePlan} plans={plans} />
               </div>
             </section>
 
@@ -227,7 +224,7 @@ export function PlanSetup() {
 
             <PaymentInformationCard
               onContinueBasic={handleContinueBasic}
-              onOpenUpgrade={() => firstUpgradePlan ? setSelectedUpgradePlan(firstUpgradePlan) : undefined}
+              onOpenUpgrade={() => (firstUpgradePlan ? setSelectedUpgradePlan(firstUpgradePlan) : undefined)}
             />
 
             <BusinessLicenseNotice
@@ -242,7 +239,7 @@ export function PlanSetup() {
                 Anterior
               </Button>
               <Button
-                disabled={!canContinue || isSubmitting}
+                disabled={isSubmitting}
                 isLoading={isSubmitting}
                 loadingText="Confirmando plan..."
                 onClick={handleSubmit}

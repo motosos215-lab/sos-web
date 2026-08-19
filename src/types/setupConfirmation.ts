@@ -1,10 +1,4 @@
-export type SetupSummaryKey =
-  | "cuenta"
-  | "perfil"
-  | "motocicleta"
-  | "contactos"
-  | "dispositivos"
-  | "plan";
+export type SetupSummaryKey = "cuenta" | "perfil" | "motocicleta" | "contactos" | "dispositivos" | "plan";
 
 export type SetupSummaryStatus = "complete" | "warning" | "incomplete";
 

@@ -1,13 +1,9 @@
-import { FormEvent, useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { FormEvent, useEffect, useRef, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { AlertMessage } from "../../../components/common/AlertMessage/AlertMessage";
 import { Button } from "../../../components/common/Button/Button";
 import { SetupLayout } from "../../../layouts/SetupLayout/SetupLayout";
-import {
-  clearEmergencyContactDraft,
-  getEmergencyContactDraft,
-  saveEmergencyContactDraft,
-} from "../../../services/contactDraftService";
+import { clearEmergencyContactDraft, getEmergencyContactDraft, saveEmergencyContactDraft } from "../../../services/contactDraftService";
 import {
   checkContactAvailability,
   deleteEmergencyContact,
@@ -15,12 +11,13 @@ import {
   revokeContactInvitation,
   saveEmergencyContact,
   sendContactInvitation,
-  simulateContactLink,
+  syncEmergencyContacts,
   updateEmergencyContact,
 } from "../../../services/contactService";
 import { getStoredEmergencyContacts, upsertStoredEmergencyContact } from "../../../services/contactStorageService";
 import { getSession, updateSession } from "../../../services/sessionService";
 import type { ContactPermissions, EmergencyContact, EmergencyContactDraft, EmergencyContactFormData } from "../../../types/contact";
+import { getApiErrorMessage } from "../../../utils/apiErrors";
 import { copyTextToClipboard } from "../../../utils/clipboard";
 import { ConfirmActionModal } from "./ConfirmActionModal";
 import { ContactFormModal, type ContactFormErrors } from "./ContactFormModal";
@@ -28,9 +25,7 @@ import { ContactList } from "./ContactList";
 import { InvitationPanel } from "./InvitationPanel";
 import "./ContactSetup.css";
 
-type ConfirmAction =
-  | { contact: EmergencyContact; type: "delete" }
-  | { contact: EmergencyContact; type: "revoke" };
+type ConfirmAction = { contact: EmergencyContact; type: "delete" } | { contact: EmergencyContact; type: "revoke" };
 
 const defaultPermissions: ContactPermissions = {
   realTimeLocation: true,
@@ -80,13 +75,17 @@ function normalizePhoneDigits(phone: string) {
   return phone.replace(/\D/g, "");
 }
 
+function normalizeNationalPhone(phone: string) {
+  return normalizePhoneDigits(phone).slice(0, 10);
+}
+
 function sanitizeFormData(data: EmergencyContactDraft): EmergencyContactDraft {
   return {
     ...data,
     fullName: data.fullName.trim().replace(/\s+/g, " "),
     relationship: data.relationship,
     customRelationship: data.customRelationship.trim().replace(/\s+/g, " "),
-    phone: data.phone.trim(),
+    phone: normalizeNationalPhone(data.phone),
     email: data.email.trim().toLowerCase(),
     priority: data.priority || "principal",
     permissions: {
@@ -125,7 +124,6 @@ function getDraftFromContact(contact: EmergencyContact): EmergencyContactDraft {
 
 function validateContact(data: EmergencyContactDraft): ContactFormErrors {
   const errors: ContactFormErrors = {};
-  const phoneCharactersPattern = /^[0-9\s()+-]+$/;
   const phoneDigits = normalizePhoneDigits(data.phone);
   const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -141,8 +139,8 @@ function validateContact(data: EmergencyContactDraft): ContactFormErrors {
     errors.customRelationship = "Especifica la relación";
   }
 
-  if (!phoneCharactersPattern.test(data.phone) || phoneDigits.length < 10 || phoneDigits.length > 15 || /^0+$/.test(phoneDigits)) {
-    errors.phone = "Ingresa un número de teléfono válido";
+  if (!/^\d{10}$/.test(phoneDigits) || /^0+$/.test(phoneDigits)) {
+    errors.phone = "Ingresa un teléfono de 10 dígitos sin lada";
   }
 
   if (!emailPattern.test(data.email) || data.email.length > 120) {
@@ -176,25 +174,21 @@ function focusFirstContactError(errors: ContactFormErrors) {
 
 function getInvitationChannelMessage(contact: EmergencyContact) {
   if (contact.invitationChannel === "email") {
-    return "Simulación: la invitación fue preparada para enviarse por correo electrónico";
+    return "La invitación quedó lista para enviarse por correo electrónico";
   }
 
   if (contact.invitationChannel === "sms") {
-    return "Simulación: la invitación fue preparada para enviarse por SMS";
+    return "La invitación quedó lista para enviarse por SMS";
   }
 
-  return "Simulación: el código y enlace están listos para compartirse";
+  return "El código y enlace están listos para compartirse";
 }
 
 function updateExpiredInvitations(contacts: EmergencyContact[]) {
   let changed = false;
   const now = Date.now();
   const nextContacts = contacts.map((contact) => {
-    if (
-      contact.invitationStatus === "invited" &&
-      contact.invitationExpiresAt &&
-      new Date(contact.invitationExpiresAt).getTime() <= now
-    ) {
+    if (contact.invitationStatus === "invited" && contact.invitationExpiresAt && new Date(contact.invitationExpiresAt).getTime() <= now) {
       changed = true;
       return {
         ...contact,
@@ -213,7 +207,9 @@ function updateExpiredInvitations(contacts: EmergencyContact[]) {
 
 export function ContactSetup() {
   const navigate = useNavigate();
+  const { contactId } = useParams<{ contactId?: string }>();
   const session = getSession();
+  const missingEditContactIdRef = useRef<string | null>(null);
   const contactLimit = session?.contactLimit ?? 1;
   const [contacts, setContacts] = useState<EmergencyContact[]>(() => updateExpiredInvitations(getStoredEmergencyContacts()).contacts);
   const [formData, setFormData] = useState<EmergencyContactDraft>(initialFormData);
@@ -235,8 +231,8 @@ export function ContactSetup() {
   const activeInvitationContact = contacts.find((contact) => contact.invitationStatus === "invited") ?? primaryContact;
   const hasActiveInvitation = Boolean(
     activeInvitationContact?.invitationCode &&
-      activeInvitationContact.invitationLink &&
-      activeInvitationContact.invitationStatus === "invited",
+    activeInvitationContact.invitationLink &&
+    activeInvitationContact.invitationStatus === "invited",
   );
   const isPlanLimitReached = contacts.length >= contactLimit;
 
@@ -259,6 +255,17 @@ export function ContactSetup() {
       result.contacts.forEach(upsertStoredEmergencyContact);
       setContacts(result.contacts);
     }
+
+    const syncContacts = async () => {
+      try {
+        await syncEmergencyContacts();
+        setContacts(getStoredEmergencyContacts());
+      } catch (error) {
+        setWarningMessage(getApiErrorMessage(error));
+      }
+    };
+
+    void syncContacts();
   }, []);
 
   const refreshContacts = () => setContacts(getStoredEmergencyContacts());
@@ -273,6 +280,9 @@ export function ContactSetup() {
     setIsModalOpen(false);
     setEditingContactId(null);
     setFormErrors({});
+    if (contactId) {
+      navigate("/configuracion/contactos", { replace: true });
+    }
     window.setTimeout(() => document.getElementById("addEmergencyContact")?.focus(), 0);
   };
 
@@ -297,9 +307,41 @@ export function ContactSetup() {
     setIsModalOpen(true);
   };
 
+  useEffect(() => {
+    if (!contactId || editingContactId === contactId) {
+      return;
+    }
+
+    const contact = contacts.find((item) => item.id === contactId);
+
+    if (contact) {
+      missingEditContactIdRef.current = null;
+      setSuccessMessage("");
+      setWarningMessage("");
+      setErrorMessage("");
+      setEditingContactId(contact.id);
+      setFormData(getDraftFromContact(contact));
+      setFormErrors({});
+      setIsModalOpen(true);
+      return;
+    }
+
+    if (contacts.length > 0 && missingEditContactIdRef.current !== contactId) {
+      missingEditContactIdRef.current = contactId;
+      setWarningMessage("No encontramos ese contacto de emergencia en tu cuenta.");
+    }
+  }, [contactId, contacts, editingContactId]);
+
   const updateField = <Field extends keyof EmergencyContactDraft>(field: Field, value: EmergencyContactDraft[Field]) => {
-    setFormData((current) => ({ ...current, [field]: value }));
+    setFormData((current) => ({
+      ...current,
+      [field]: value,
+      permissions: field === "priority" && value === "principal" ? { ...current.permissions, criticalAlerts: true } : current.permissions,
+    }));
     setFormErrors((current) => ({ ...current, [field]: undefined, form: undefined }));
+    if (field === "priority" && value === "principal") {
+      setCriticalAlertMessage("");
+    }
   };
 
   const updatePermission = (key: keyof ContactPermissions, value: boolean) => {
@@ -405,7 +447,10 @@ export function ContactSetup() {
     }
   };
 
-  const applyInvitation = (contact: EmergencyContact, invitation: NonNullable<Awaited<ReturnType<typeof sendContactInvitation>>["data"]>) => {
+  const applyInvitation = (
+    contact: EmergencyContact,
+    invitation: NonNullable<Awaited<ReturnType<typeof sendContactInvitation>>["data"]>,
+  ) => {
     const nextContact: EmergencyContact = {
       ...contact,
       invitationStatus: invitation.invitationStatus,
@@ -421,7 +466,13 @@ export function ContactSetup() {
   };
 
   const handleSendInvitation = async (contact = primaryContact) => {
-    if (!contact || contact.invitationStatus !== "pending") {
+    if (!contact) {
+      setWarningMessage("Primero guarda un contacto de emergencia");
+      return;
+    }
+
+    if (contact.invitationStatus !== "pending") {
+      setWarningMessage("La invitación solo puede generarse para contactos pendientes");
       return;
     }
 
@@ -470,6 +521,7 @@ export function ContactSetup() {
 
   const handleCopyCode = async (contact = activeInvitationContact) => {
     if (!contact?.invitationCode || contact.invitationStatus !== "invited") {
+      setWarningMessage("Primero genera una invitación para crear el código");
       return;
     }
 
@@ -479,6 +531,7 @@ export function ContactSetup() {
 
   const handleCopyLink = async (contact = activeInvitationContact) => {
     if (!contact?.invitationLink || contact.invitationStatus !== "invited") {
+      setWarningMessage("Primero genera una invitación para crear el enlace");
       return;
     }
 
@@ -502,23 +555,6 @@ export function ContactSetup() {
     upsertStoredEmergencyContact(nextContact);
     refreshContacts();
     setWarningMessage("La invitación ha expirado");
-  };
-
-  const handleSimulateLink = async (contact: EmergencyContact) => {
-    clearMessages();
-    setIsProcessingAction(true);
-
-    try {
-      const response = await simulateContactLink(contact.id);
-      if (!response.success) {
-        setErrorMessage(response.message);
-        return;
-      }
-      refreshContacts();
-      setSuccessMessage(response.message);
-    } finally {
-      setIsProcessingAction(false);
-    }
   };
 
   const confirmSelectedAction = async () => {
@@ -593,20 +629,25 @@ export function ContactSetup() {
 
         <section className="contact-setup__toolbar" aria-label="Acciones de contactos">
           <div>
-            <Button disabled={isPlanLimitReached} id="addEmergencyContact" onClick={openAddContact} type="button">
+            <Button id="addEmergencyContact" onClick={openAddContact} type="button">
               Agregar contacto
             </Button>
             <Button
-              disabled={!primaryContact || primaryContact.invitationStatus !== "pending"}
               isLoading={isSendingInvitation}
               loadingText="Generando invitación..."
               onClick={() => handleSendInvitation()}
+              title={!primaryContact ? "Primero guarda un contacto" : "La invitación solo puede enviarse si el contacto está pendiente"}
               type="button"
               variant="secondary"
             >
               Enviar invitación
             </Button>
-            <Button disabled={!hasActiveInvitation} onClick={() => handleCopyLink()} type="button" variant="secondary">
+            <Button
+              onClick={() => handleCopyLink()}
+              title="Primero genera una invitación para crear el enlace o código"
+              type="button"
+              variant="secondary"
+            >
               Copiar enlace o código
             </Button>
           </div>
@@ -632,7 +673,6 @@ export function ContactSetup() {
               onResend={handleResendInvitation}
               onRevoke={(contact) => setConfirmAction({ contact, type: "revoke" })}
               onSend={handleSendInvitation}
-              onSimulateLink={handleSimulateLink}
             />
           </div>
 
@@ -648,10 +688,14 @@ export function ContactSetup() {
         </div>
 
         <section className="contact-setup__actions" aria-label="Navegación de configuración">
-          <Button onClick={handleSaveDraft} type="button" variant="secondary">Guardar borrador</Button>
+          <Button onClick={handleSaveDraft} type="button" variant="secondary">
+            Guardar borrador
+          </Button>
           <div>
-            <Button onClick={() => navigate("/configuracion/motocicleta")} type="button" variant="secondary">Anterior</Button>
-            <Button disabled={!primaryContact || !["invited", "linked"].includes(primaryContact.invitationStatus)} onClick={handleContinue} type="button">
+            <Button onClick={() => navigate("/configuracion/motocicleta")} type="button" variant="secondary">
+              Anterior
+            </Button>
+            <Button onClick={handleContinue} type="button">
               Siguiente
             </Button>
           </div>
@@ -677,8 +721,8 @@ export function ContactSetup() {
             isProcessing={isProcessingAction}
             message={
               confirmAction.type === "revoke"
-                ? "Se invalidará la invitación y el contacto perderá el acceso simulado."
-                : "El contacto se eliminará de esta demostración y podrás registrar uno nuevo."
+                ? "Se invalidará la invitación y el contacto perderá el acceso."
+                : "El contacto se eliminará y podrás registrar uno nuevo."
             }
             onCancel={() => setConfirmAction(null)}
             onConfirm={confirmSelectedAction}

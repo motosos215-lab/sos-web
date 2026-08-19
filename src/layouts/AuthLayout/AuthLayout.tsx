@@ -28,7 +28,7 @@ export function AuthLayout({ children }: AuthLayoutProps) {
     <main className="auth-layout">
       <section className="auth-layout__info" aria-label="Información de MotoSOS">
         <div className="auth-layout__brand">
-          <div className="auth-layout__logo" aria-label="Logo temporal de MotoSOS">
+          <div className="auth-layout__logo" aria-label="Logo de MotoSOS">
             MS
           </div>
           <div>
@@ -60,10 +60,10 @@ export function AuthLayout({ children }: AuthLayoutProps) {
 
       <section className="auth-layout__content" aria-label="Acceso a MotoSOS">
         <header className="auth-layout__topbar">
-          <a href="mailto:soporte@motosos.local">Soporte y ayuda</a>
-          <button aria-label="Idioma actual: Español" type="button">
+          <a href="mailto:soporte@motosos.com">Soporte y ayuda</a>
+          <span aria-label="Idioma actual: Español" role="status">
             Español
-          </button>
+          </span>
         </header>
         <div className="auth-layout__panel">{children}</div>
       </section>
