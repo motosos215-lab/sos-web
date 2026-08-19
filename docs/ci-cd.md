@@ -45,50 +45,56 @@ Archivo: `.github/workflows/frontend-security.yml`.
 
 Ejecuta `npm audit --audit-level=high`.
 
-## Bloqueo temporal de seguridad en React Router
+## Dependencias frontend
 
 Frontend Security ejecuta `npm audit --audit-level=high` y permanece estricto.
 
-Actualmente npm reporta advisories high en `react-router`, introducidos por `react-router-dom`. La excepcion documentada no significa que la vulnerabilidad haya sido corregida ni formalmente aceptada por el equipo.
+El riesgo historico `FE-SEC-001` por `react-router` / `react-router-dom` esta cerrado. La validacion actual no reporta vulnerabilidades high o critical con `npm audit --audit-level=high`.
 
-No se aplico downgrade porque bajar a `react-router-dom@7.11.0`, version propuesta por npm, no resolvia el conjunto completo de advisories observado previamente y ademas requiere analisis de compatibilidad.
+No se debe usar `npm audit fix --force` sin revisar breaking changes. Las actualizaciones deben entrar por PR, con Dependency Review y ejecucion completa de CI.
 
-No se utilizo `npm audit fix --force`, no se agrego `continue-on-error` y no se redujo el nivel de auditoria.
-
-El equipo debe actualizar cuando exista una version compatible que resuelva todos los advisories relevantes. Dependabot ayudara a detectar nuevas versiones disponibles.
-
-Antes de actualizar deben ejecutarse build y pruebas manuales de navegacion. El riesgo se registra en `docs/security-risk-register.md` como `FE-SEC-001`.
-
-## Procedimiento de actualizacion de React Router
+## Procedimiento de actualizacion de dependencias
 
 1. Dependabot abre un pull request de actualizacion.
-2. Revisar changelog y advisories de `react-router` y `react-router-dom`.
-3. Confirmar version resuelta con `npm ls react-router react-router-dom`.
+2. Revisar changelog y advisories del paquete actualizado.
+3. Confirmar version resuelta con `npm ls <paquete>` cuando aplique.
 4. Ejecutar `npm ci`.
 5. Ejecutar `npm audit --audit-level=high`.
-6. Ejecutar `npm run build`.
-7. Ejecutar scripts opcionales existentes, por ejemplo `format:check`, `lint`, `type-check` o `test` si estan configurados.
-8. Probar manualmente `/login`.
-9. Probar manualmente `/registro`.
-10. Probar manualmente `/configuracion/perfil`.
-11. Probar manualmente `/configuracion/confirmacion`.
-12. Probar manualmente `/dashboard/resumen`.
-13. Probar manualmente `/dashboard/incidentes`.
-14. Probar manualmente `/dashboard/incidentes/INC-000123`.
-15. Comprobar navegacion, rutas protegidas, redirecciones, parametros, logout y restauracion de sesion.
-16. Integrar solamente cuando audit y CI sean satisfactorios.
-17. Cerrar `FE-SEC-001` en `docs/security-risk-register.md`.
+6. Ejecutar `npm run format:check`.
+7. Ejecutar `npm run lint`.
+8. Ejecutar `npm run type-check`.
+9. Ejecutar `npm test`.
+10. Ejecutar `npm run build`.
+11. Probar manualmente `/login`.
+12. Probar manualmente `/register`.
+13. Probar manualmente `/forgot-password`.
+14. Probar manualmente `/emergency-contacts/{contactId}/edit` sin tokens en URL.
+15. Probar manualmente `/configuracion/perfil`.
+16. Probar manualmente `/configuracion/confirmacion`.
+17. Probar manualmente `/dashboard/resumen`.
+18. Probar manualmente `/dashboard/incidentes`.
+19. Probar manualmente `/dashboard/incidentes/INC-000123`.
+20. Comprobar navegacion, rutas protegidas, redirecciones, parametros, logout y restauracion de sesion.
+21. Integrar solamente cuando audit y CI sean satisfactorios.
 
-## Netlify Futuro
+## Netlify
 
-No hay deploy automatico configurado en este repositorio.
+El proyecto tiene deploy preview activo en Netlify para Pull Requests.
 
-Configuracion manual recomendada cuando el equipo decida activar Netlify:
+Configuracion esperada:
 
 - Build command: `npm run build`
 - Publish directory: `dist`
 - Node version: `22`
 - Variables de entorno: configurar desde Netlify, no desde Git.
+
+Rutas web requeridas por clientes moviles:
+
+- Registro: `/register`
+- Recuperacion de password: `/forgot-password`
+- Edicion de contacto de emergencia: `/emergency-contacts/{contactId}/edit`
+
+Estas rutas son del frontend web. No deben reemplazarse por URLs del API y no deben recibir `accessToken` ni `refreshToken` por query string.
 
 Secrets tipicos de Netlify, si se usan GitHub Actions en el futuro:
 
@@ -97,8 +103,16 @@ Secrets tipicos de Netlify, si se usan GitHub Actions en el futuro:
 
 No crear ni commitear esos secrets en archivos del repositorio.
 
-## Validación posterior a la estabilización
+## Validacion posterior a la estabilizacion
 
-Los workflows del frontend fueron configurados para validar Pull Requests hacia
-`develop` y `main`. Los nombres exactos de los status checks deben confirmarse
-en GitHub antes de agregarlos como obligatorios en los rulesets.
+Los workflows del frontend validan Pull Requests hacia `develop` y `main`.
+
+Status checks actuales a considerar como obligatorios:
+
+- `Frontend CI`
+- `npm audit`
+- `Dependency Review`
+- `Scan`
+- `Analyze`
+- `CodeQL`
+- `netlify/motosos/deploy-preview`
